@@ -9,6 +9,8 @@ import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import MobileNav from './components/Layout/MobileNav';
 import AppErrorBoundary from './components/AppErrorBoundary';
+import { ToastProvider } from './components/Toast';
+import { ThemeProvider } from './components/ThemeProvider';
 
 import HomePage from './pages/HomePage';
 import LandingPage from './pages/LandingPage';
@@ -633,30 +635,27 @@ function App() {
     ));
     if (existing) {
       if (existing.password && existing.password !== _password) {
-        alert('Incorrect password');
-        return;
+        throw new Error('Incorrect password');
       }
       setUser(existing);
       return;
     }
 
-    alert('Incorrect username or password');
+    throw new Error('Incorrect username or password');
   };
 
   const register = (username: string, email: string, password: string) => {
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedUsername || !password.trim()) {
-      alert('Username and password are required');
-      return;
+      throw new Error('Username and password are required');
     }
 
     const emailHandle = trimmedUsername.toLowerCase().replace(/[^a-z0-9]+/g, '') || `user${Date.now()}`;
     const resolvedEmail = trimmedEmail || `${emailHandle}@btcplatform.com`;
     const duplicate = users.find((entry) => entry.email.toLowerCase() === resolvedEmail);
     if (duplicate) {
-      alert('That email is already registered');
-      return;
+      throw new Error('That email is already registered');
     }
 
     const freshUser: User = {
@@ -703,8 +702,7 @@ function App() {
     const trimmedName = name.trim() || 'Google User';
 
     if (!normalizedEmail) {
-      alert('Google account email is missing');
-      return;
+      throw new Error('Google account email is missing');
     }
 
     const existing = users.find((entry) => entry.email.toLowerCase() === normalizedEmail);
@@ -1019,6 +1017,8 @@ function App() {
 
   return (
     <AppErrorBoundary>
+      <ThemeProvider>
+      <ToastProvider>
       <AuthContext.Provider value={authValue}>
         <AppContext.Provider value={appValue}>
           <BrowserRouter>
@@ -1029,7 +1029,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             ) : (
-              <div className="min-h-screen bg-btc-dark lg:flex lg:h-screen">
+              <div className="min-h-screen lg:flex lg:h-screen" style={{ background: 'var(--bg-primary)' }}>
                 <Sidebar />
                 <div className="flex min-h-screen flex-1 flex-col lg:overflow-hidden">
                   <Header
@@ -1037,7 +1037,7 @@ function App() {
                     btcChange24h={marketSnapshot.change24h}
                     marketStatus={marketSnapshot.source}
                   />
-                  <main className="app-main-scroll flex-1 bg-[#0f131c] px-4 pb-28 pt-4 sm:px-5 lg:overflow-y-auto lg:px-6 lg:pb-6 lg:pt-6">
+                  <main className="app-main-scroll flex-1 px-4 pb-28 pt-4 sm:px-5 lg:overflow-y-auto lg:px-6 lg:pb-6 lg:pt-6 page-enter" style={{ background: 'var(--bg-secondary)' }}>
                     <Routes>
                       <Route path="/" element={user.role === 'admin' ? <Navigate to="/admin" replace /> : <HomePage />} />
                       <Route path="/finance" element={user.role === 'admin' ? <Navigate to="/admin" replace /> : <FinancePage />} />
@@ -1059,6 +1059,8 @@ function App() {
           </BrowserRouter>
         </AppContext.Provider>
       </AuthContext.Provider>
+      </ToastProvider>
+      </ThemeProvider>
     </AppErrorBoundary>
   );
 }

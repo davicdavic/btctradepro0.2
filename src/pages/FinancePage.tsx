@@ -4,10 +4,13 @@ import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Check, Copy, Lock, Wallet } fr
 import { useAuth, useApp } from '../App';
 import type { Transaction } from '../types';
 import { DEPOSIT_WALLET, formatNumber } from '../utils/mockData';
+import { useToast } from '../components/Toast';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function FinancePage() {
   const { user, updateUser } = useAuth();
   const { btcPrice, transactions, addTransaction } = useApp();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'stake'>('deposit');
   const [depositAmount, setDepositAmount] = useState('');
@@ -19,6 +22,7 @@ export default function FinancePage() {
   const [withdrawSubmitted, setWithdrawSubmitted] = useState(false);
   const [stakeSubmitted, setStakeSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const userTransactions = useMemo(
     () => transactions.filter((entry) => entry.userEmail === user?.email).slice(0, 8),
@@ -37,8 +41,10 @@ export default function FinancePage() {
     setDepositSubmitted(false);
   };
 
-  const submitDeposit = () => {
+  const submitDeposit = async () => {
     if (!user || !depositAmount) return;
+    setIsProcessing(true);
+    await new Promise((r) => setTimeout(r, 800));
     const btcAmount = parseFloat(depositAmount);
     const amount = btcAmount * btcPrice;
     const nextTransaction: Transaction = {
@@ -56,15 +62,23 @@ export default function FinancePage() {
     setDepositSubmitted(true);
     setDepositAmount('');
     setDepositReady(false);
+    setIsProcessing(false);
+    toast.success('Deposit submitted', 'Your deposit is pending admin approval.');
   };
 
-  const submitWithdraw = () => {
+  const submitWithdraw = async () => {
     if (!user || !withdrawAmount) return;
     const amount = parseFloat(withdrawAmount);
     if (amount > (user.usdBalance || 0)) {
-      alert('Insufficient USD balance');
+      toast.error('Insufficient balance', `You have $${formatNumber(user.usdBalance || 0)} available.`);
       return;
     }
+    if (!withdrawAddress.trim()) {
+      toast.error('Address required', 'Enter a withdrawal wallet address.');
+      return;
+    }
+    setIsProcessing(true);
+    await new Promise((r) => setTimeout(r, 800));
     addTransaction({
       id: `tx-${Date.now()}`,
       type: 'withdraw',
@@ -79,15 +93,19 @@ export default function FinancePage() {
     setWithdrawSubmitted(true);
     setWithdrawAmount('');
     setWithdrawAddress('');
+    setIsProcessing(false);
+    toast.success('Withdrawal submitted', 'Your request is pending admin approval.');
   };
 
-  const submitStake = () => {
+  const submitStake = async () => {
     if (!user || !stakeAmount) return;
     const amount = parseFloat(stakeAmount);
     if (amount > user.btcBalance) {
-      alert('Insufficient BTC balance');
+      toast.error('Insufficient BTC', `You have ${user.btcBalance.toFixed(6)} BTC available.`);
       return;
     }
+    setIsProcessing(true);
+    await new Promise((r) => setTimeout(r, 800));
     updateUser({
       btcBalance: user.btcBalance - amount,
       stakeAmount: (user.stakeAmount || 0) + amount,
@@ -104,6 +122,8 @@ export default function FinancePage() {
     });
     setStakeSubmitted(true);
     setStakeAmount('');
+    setIsProcessing(false);
+    toast.success('Staking confirmed', `${amount.toFixed(6)} BTC has been staked.`);
   };
 
   return (
@@ -461,7 +481,7 @@ export default function FinancePage() {
                   <div className="amount-note">
                     Pending credit: {parseFloat(depositAmount).toFixed(8)} BTC and ${formatNumber(parseFloat(depositAmount) * btcPrice)} USDT
                   </div>
-                  <button className="cta" onClick={submitDeposit}>Finish Deposit</button>
+                  <button className="cta" onClick={submitDeposit} disabled={isProcessing} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{isProcessing ? <><LoadingSpinner size={16} color="#111" /> Processing...</> : 'Finish Deposit'}</button>
                 </div>
               )}
 
@@ -486,7 +506,7 @@ export default function FinancePage() {
                 <label>BTC Wallet Address</label>
                 <input className="amount-input" style={{ fontSize: '16px', fontWeight: 600 }} value={withdrawAddress} onChange={(event) => setWithdrawAddress(event.target.value)} type="text" placeholder="Paste your BTC wallet address" />
               </div>
-              <button className="cta" onClick={submitWithdraw}>Submit Withdrawal</button>
+              <button className="cta" onClick={submitWithdraw} disabled={isProcessing} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{isProcessing ? <><LoadingSpinner size={16} color="#111" /> Processing...</> : 'Submit Withdrawal'}</button>
               {withdrawSubmitted && (
                 <div className="status-banner">Withdrawal request submitted. System Admin approval will remove the amount from your wallet.</div>
               )}
@@ -502,7 +522,7 @@ export default function FinancePage() {
                 <input className="amount-input" value={stakeAmount} onChange={(event) => setStakeAmount(event.target.value)} type="number" placeholder="0.050000" />
                 <div className="amount-note">Available BTC: {(user?.btcBalance || 0).toFixed(6)}</div>
               </div>
-              <button className="cta" onClick={submitStake}>Start Staking</button>
+              <button className="cta" onClick={submitStake} disabled={isProcessing} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{isProcessing ? <><LoadingSpinner size={16} color="#111" /> Processing...</> : 'Start Staking'}</button>
               {stakeSubmitted && (
                 <div className="status-banner">BTC moved to staking successfully. The balance updates immediately in this demo.</div>
               )}

@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { Award, Camera, Check, FileText, Shield, User } from 'lucide-react';
 import { useAuth } from '../App';
+import { useToast } from '../components/Toast';
 
 const COUNTRY_OPTIONS = [
   'United States',
@@ -43,6 +44,7 @@ function verificationStatusLabel(status: 'unverified' | 'pending' | 'approved' |
 
 export default function ProfilePage() {
   const { user, updateUser, submitKycRequest } = useAuth();
+  const toast = useToast();
   const hasVerifiedProfile = user?.verificationStatus === 'approved';
   const memberSince = user?.joinedDate ? new Date(user.joinedDate).toLocaleDateString() : 'Not available';
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'verification'>('profile');
@@ -136,7 +138,7 @@ export default function ProfilePage() {
 
   const savePassword = () => {
     if (!passwords.newPassword || passwords.newPassword !== passwords.confirmPassword) {
-      alert('New passwords do not match');
+      toast.error('Password mismatch', 'New passwords do not match');
       return;
     }
     updateUser({ password: passwords.newPassword });
@@ -146,7 +148,7 @@ export default function ProfilePage() {
 
   const submitKyc = () => {
     if (!kycForm.fullName || !kycForm.phone || !kycForm.country || !kycForm.city || !kycForm.postCode || !kycForm.job || !kycForm.frontImage || !kycForm.backImage) {
-      alert('Complete all verification fields and upload both document images.');
+      toast.error('Incomplete form', 'Complete all verification fields and upload both document images.');
       return;
     }
     updateUser({

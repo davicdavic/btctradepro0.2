@@ -35,8 +35,8 @@ export default function MobileNav() {
           display: grid;
           grid-template-columns: repeat(${items.length}, 1fr);
           gap: 8px;
-          background: rgba(10, 14, 21, 0.94);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: var(--bg-card);
+          border: 1px solid var(--border-primary);
           border-radius: 22px;
           padding: 10px 12px;
           box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
@@ -50,7 +50,7 @@ export default function MobileNav() {
           justify-content: center;
           gap: 6px;
           text-decoration: none;
-          color: #7f8ea3;
+          color: var(--text-secondary);
           font-size: 11px;
           font-weight: 600;
           padding: 8px 4px;
