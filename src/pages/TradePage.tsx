@@ -5,6 +5,8 @@ import { useAuth, useApp } from '../App';
 import { formatNumber } from '../utils/mockData';
 import { createFallbackCandles, fetchBtcCandles, getIntervalSeconds, type MarketCandle, type MarketInterval } from '../utils/marketApi';
 import { calculateLiquidationPrice, calculatePnL } from '../utils/tradeEngine';
+import { useToast } from '../components/Toast';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const TIMEFRAMES: Array<{ label: string; value: MarketInterval; tradeSeconds: number }> = [
   { label: '1m', value: '1m', tradeSeconds: 60 },
@@ -52,6 +54,7 @@ function formatTradeCountdown(totalSeconds: number) {
 export default function TradePage() {
   const { user } = useAuth();
   const { btcPrice, btcChange24h, btcHigh24h, btcLow24h, trades, activeTrade, lastTradeResult, startTrade, clearTradeResult } = useApp();
+  const toast = useToast();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -409,13 +412,21 @@ export default function TradePage() {
   const handleTrade = () => {
     if (!direction || !amount || isTrading) return;
     if (!canTrade) {
-      alert('Verify your account in Profile before trading.');
+      toast.warning('Verification required', 'Complete your profile verification before trading.');
       return;
     }
     const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      toast.error('Invalid amount', 'Enter a valid trade amount.');
+      return;
+    }
+    if (parsedAmount < 10) {
+      toast.error('Minimum $10', 'Trade amount must be at least $10.');
+      return;
+    }
 
     if (parsedAmount > (user?.usdBalance || 0)) {
-      alert('Insufficient balance');
+      toast.error('Insufficient balance', `You need $${formatNumber(parsedAmount)} but have $${formatNumber(user?.usdBalance || 0)}.`);
       return;
     }
 
@@ -438,6 +449,7 @@ export default function TradePage() {
       endTime: new Date(Date.now() + selectedTimeframe.tradeSeconds * 1000).toISOString(),
       userEmail: user?.email || '',
     });
+    toast.success('Trade opened', `${direction === 'up' ? 'Long' : 'Short'} $${formatNumber(parsedAmount)} at ${leverage}x leverage`);
   };
 
   const resetTrade = () => {
@@ -1195,7 +1207,7 @@ export default function TradePage() {
 
         <div className="chart-box">
           <div ref={chartContainerRef} className="chart-canvas" />
-          {isChartLoading && <div className="chart-loading">Updating live BTC candles...</div>}
+          {isChartLoading && <div className="chart-loading"><LoadingSpinner size={14} /> Updating live BTC candles...</div>}
           {isTrading && activeTrade && (
             <div className={`live-trade-overlay ${activeTrade.direction === 'up' ? 'buy' : 'sell'}`}>
               <div className="live-trade-main">
@@ -1368,8 +1380,11 @@ export default function TradePage() {
           className={`trade-submit ${tradeButtonClass}`}
           disabled={!direction || !amount || isTrading || !canTrade}
           onClick={handleTrade}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
-          {isTrading ? `Trade running (${activeTimeframeMeta.label})...` : !canTrade ? 'Verify Account To Trade' : direction === 'up' ? `Margin Buy ${selectedTimeframe.label}` : direction === 'down' ? `Margin Sell ${selectedTimeframe.label}` : 'Choose direction'}
+          {isTrading ? (
+            <><LoadingSpinner size={18} /> Trade running ({activeTimeframeMeta.label})...</>
+          ) : !canTrade ? 'Verify Account To Trade' : direction === 'up' ? `Margin Buy ${selectedTimeframe.label}` : direction === 'down' ? `Margin Sell ${selectedTimeframe.label}` : 'Choose direction'}
         </button>
 
         {!canTrade && (

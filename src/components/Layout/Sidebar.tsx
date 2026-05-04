@@ -35,20 +35,21 @@ export default function Sidebar() {
       <style>{`
         .app-sidebar {
           width: 260px;
-          background: linear-gradient(180deg, #0b0f15, #0a0d12);
-          border-right: 1px solid rgba(255, 255, 255, 0.06);
+          background: var(--bg-primary);
+          border-right: 1px solid var(--border-primary);
           display: flex;
           flex-direction: column;
           height: 100vh;
           position: sticky;
           top: 0;
+          transition: background-color 0.3s ease;
         }
         .app-sidebar * {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         .sidebar-logo {
           padding: 20px 24px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          border-bottom: 1px solid var(--border-primary);
         }
         .logo-container {
           display: flex;
@@ -72,12 +73,12 @@ export default function Sidebar() {
         .logo-text h1 {
           font-size: 18px;
           font-weight: 700;
-          color: #e8e8e8;
+          color: var(--text-primary);
           letter-spacing: -0.5px;
         }
         .logo-text p {
           font-size: 11px;
-          color: #666;
+          color: var(--text-muted);
           text-transform: uppercase;
           letter-spacing: 1px;
         }
@@ -92,7 +93,7 @@ export default function Sidebar() {
         .nav-section-title {
           font-size: 10px;
           font-weight: 700;
-          color: #666;
+          color: var(--text-muted);
           text-transform: uppercase;
           letter-spacing: 1px;
           padding: 0 12px;
@@ -104,7 +105,7 @@ export default function Sidebar() {
           gap: 12px;
           padding: 12px 16px;
           border-radius: 12px;
-          color: #8894a5;
+          color: var(--text-secondary);
           text-decoration: none;
           font-size: 14px;
           font-weight: 500;
@@ -113,8 +114,8 @@ export default function Sidebar() {
           position: relative;
         }
         .nav-item:hover {
-          background: #141a24;
-          color: #e8eef8;
+          background: var(--bg-tertiary);
+          color: var(--text-primary);
         }
         .nav-item.active {
           background: linear-gradient(180deg, rgba(20, 33, 52, 0.96), rgba(20, 33, 52, 0.72));
@@ -156,7 +157,7 @@ export default function Sidebar() {
         }
         .sidebar-footer {
           padding: 16px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          border-top: 1px solid var(--border-primary);
         }
         .footer-nav {
           display: flex;
@@ -169,14 +170,14 @@ export default function Sidebar() {
           gap: 12px;
           padding: 10px 16px;
           border-radius: 8px;
-          color: #666;
+          color: var(--text-muted);
           text-decoration: none;
           font-size: 13px;
           transition: all 0.2s;
         }
         .footer-item:hover {
-          background: #141a24;
-          color: #8894a5;
+          background: var(--bg-tertiary);
+          color: var(--text-secondary);
         }
         .logout-btn {
           display: flex;

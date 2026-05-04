@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, Settings, User, Wallet, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../App';
+import { ThemeToggle } from '../ThemeProvider';
 
 interface HeaderProps {
   btcPrice: number;
@@ -57,9 +58,10 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           flex-direction: column;
           gap: 12px;
           padding: 16px 18px;
-          background: rgba(15, 18, 26, 0.96);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          background: var(--bg-card);
+          border-bottom: 1px solid var(--border-primary);
           backdrop-filter: blur(16px);
+          transition: background-color 0.3s ease;
         }
         .pro-header * {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -175,9 +177,9 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           align-items: center;
           gap: 14px;
           padding: 10px 14px;
-          background: rgba(255, 255, 255, 0.04);
+          background: var(--bg-tertiary);
           border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--border-primary);
         }
         .balance-label {
           display: block;
@@ -203,10 +205,15 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
         }
         .header-btn,
         .user-btn {
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--border-primary);
+          background: var(--bg-tertiary);
           border-radius: 14px;
-          color: #d3dcea;
+          color: var(--text-secondary);
+          transition: all 0.2s ease;
+        }
+        .header-btn:hover,
+        .user-btn:hover {
+          border-color: var(--border-hover);
         }
         .header-btn {
           position: relative;
@@ -265,12 +272,17 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           top: calc(100% + 8px);
           right: 0;
           min-width: 220px;
-          background: #131821;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: var(--bg-card);
+          border: 1px solid var(--border-primary);
           border-radius: 12px;
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+          box-shadow: var(--shadow-card);
           overflow: hidden;
           z-index: 1000;
+          animation: dropdownFadeIn 0.2s ease;
+        }
+        @keyframes dropdownFadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .dropdown-header {
           padding: 16px;
@@ -622,6 +634,8 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
               <span className="balance-value btc">{(user?.btcBalance || 0).toFixed(6)}</span>
             </div>
           </div>
+
+          <ThemeToggle />
 
           <div className="user-menu" ref={notificationMenuRef}>
             {showNotifications && <button type="button" className="menu-backdrop" onClick={() => setShowNotifications(false)} aria-label="Close notifications" />}
