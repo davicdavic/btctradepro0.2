@@ -131,17 +131,18 @@ export default function FinancePage() {
           <div className="deposit-modal">
             <style>{`
               .deposit-modal {
-                background: linear-gradient(180deg, #141b26, #0c1018);
-                border: 1px solid rgba(247,147,26,0.22);
-                border-radius: 28px;
+                background:
+                  radial-gradient(circle at top right, rgba(247,147,26,0.16), transparent 30%),
+                  linear-gradient(180deg, #151b26, #0b0f16);
+                border: 1px solid rgba(247,147,26,0.18);
+                border-radius: 30px;
                 box-shadow: 0 40px 120px rgba(0,0,0,0.5);
-                padding: 36px;
-                max-width: 460px;
-                width: min(100%, 460px);
+                padding: 0;
+                max-width: 520px;
+                width: min(100%, 520px);
                 max-height: min(100vh - 32px, 820px);
                 overflow-y: auto;
                 display: grid;
-                gap: 22px;
                 animation: modalIn 0.25s ease;
               }
               @keyframes modalIn {
@@ -153,11 +154,43 @@ export default function FinancePage() {
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
+                padding: 24px 24px 0;
               }
               .dm-head h2 {
-                font-size: 22px;
+                font-size: 24px;
                 font-weight: 800;
                 color: #f3f6fb;
+              }
+              .dm-receipt {
+                display: grid;
+                gap: 18px;
+                padding: 0 24px 24px;
+              }
+              .dm-receipt-top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+              }
+              .dm-receipt-kicker {
+                color: #8fa2ba;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+              }
+              .dm-status-pill {
+                display: inline-flex;
+                align-items: center;
+                min-height: 28px;
+                padding: 0 10px;
+                border-radius: 999px;
+                background: rgba(14,203,129,0.14);
+                color: #0ecb81;
+                font-size: 11px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
               }
               .dm-close {
                 width: 36px; height: 36px;
@@ -171,14 +204,41 @@ export default function FinancePage() {
               }
               .dm-close:hover { background: rgba(255,255,255,0.08); color: #eef3fb; }
               .dm-amount-box {
-                padding: 20px;
-                border-radius: 20px;
-                background: rgba(247,147,26,0.08);
-                border: 1px solid rgba(247,147,26,0.2);
-                text-align: center;
+                padding: 22px 0 18px;
+                border-bottom: 1px dashed rgba(255,255,255,0.12);
+                text-align: left;
               }
-              .dm-btc-val { font-size: 32px; font-weight: 800; color: #f6b353; font-family: 'JetBrains Mono', monospace; }
+              .dm-btc-val { font-size: 34px; font-weight: 800; color: #f6b353; font-family: 'JetBrains Mono', monospace; }
               .dm-usd-val { font-size: 14px; color: #8fa2ba; margin-top: 6px; }
+              .dm-receipt-grid {
+                display: grid;
+                gap: 12px;
+              }
+              .dm-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding-bottom: 12px;
+                border-bottom: 1px dashed rgba(255,255,255,0.08);
+              }
+              .dm-row:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+              }
+              .dm-row-label {
+                color: #8fa2ba;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+              }
+              .dm-row-value {
+                color: #eef3fb;
+                font-size: 13px;
+                font-weight: 700;
+                text-align: right;
+                word-break: break-word;
+              }
               .dm-network {
                 display: inline-flex; align-items: center; gap: 8px;
                 padding: 8px 14px; border-radius: 999px;
@@ -213,7 +273,15 @@ export default function FinancePage() {
                 font-size: 12px; color: #8fa2ba; text-align: center;
                 line-height: 1.6;
               }
-              .dm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+              .dm-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                position: sticky;
+                bottom: 0;
+                padding-top: 12px;
+                background: linear-gradient(180deg, rgba(11,15,22,0), rgba(11,15,22,0.96) 32%);
+              }
               .dm-btn {
                 min-height: 50px; border: none; border-radius: 16px;
                 font-size: 14px; font-weight: 800;
@@ -243,13 +311,17 @@ export default function FinancePage() {
               @media (max-width: 640px) {
                 .deposit-modal {
                   width: 100%;
-                  padding: 20px;
-                  gap: 18px;
                   border-radius: 22px;
-                  max-height: calc(100vh - 24px);
+                  max-height: calc(100vh - 14px);
                 }
                 .dm-head h2 {
                   font-size: 20px;
+                }
+                .dm-head {
+                  padding: 18px 18px 0;
+                }
+                .dm-receipt {
+                  padding: 0 18px 18px;
                 }
                 .dm-btc-val {
                   font-size: 26px;
@@ -269,6 +341,13 @@ export default function FinancePage() {
                 .dm-actions {
                   grid-template-columns: 1fr;
                 }
+                .dm-row {
+                  align-items: flex-start;
+                  flex-direction: column;
+                }
+                .dm-row-value {
+                  text-align: left;
+                }
               }
             `}</style>
 
@@ -285,16 +364,38 @@ export default function FinancePage() {
                 <p>System is checking your deposit.<br />This may take a few seconds...</p>
               </div>
             ) : (
-              <>
-                <div className="dm-amount-box">
-                  <div className="dm-btc-val">{pendingDeposit.btcAmount.toFixed(8)} BTC</div>
-                  <div className="dm-usd-val">≈ ${formatNumber(pendingDeposit.usdAmount)} USDT</div>
+              <div className="dm-receipt">
+                <div className="dm-receipt-top">
+                  <div className="dm-receipt-kicker">Deposit Receipt</div>
+                  <div className="dm-status-pill">Awaiting Transfer</div>
                 </div>
 
-                <div style={{ textAlign: 'center' }}>
-                  <div className="dm-network">
-                    <Bitcoin size={13} />
-                    BTC Network Only
+                <div className="dm-amount-box">
+                  <div className="dm-btc-val">{pendingDeposit.btcAmount.toFixed(8)} BTC</div>
+                  <div className="dm-usd-val">Estimated credit: ${formatNumber(pendingDeposit.usdAmount)} USDT</div>
+                </div>
+
+                <div className="dm-receipt-grid">
+                  <div className="dm-row">
+                    <span className="dm-row-label">Network</span>
+                    <span className="dm-row-value">
+                      <span className="dm-network">
+                        <Bitcoin size={13} />
+                        BTC Only
+                      </span>
+                    </span>
+                  </div>
+                  <div className="dm-row">
+                    <span className="dm-row-label">Wallet address</span>
+                    <span className="dm-row-value">{currentWallet}</span>
+                  </div>
+                  <div className="dm-row">
+                    <span className="dm-row-label">Trader</span>
+                    <span className="dm-row-value">{user?.name || 'Trader'}</span>
+                  </div>
+                  <div className="dm-row">
+                    <span className="dm-row-label">Status</span>
+                    <span className="dm-row-value">Pending admin verification after transfer</span>
                   </div>
                 </div>
 
@@ -310,19 +411,19 @@ export default function FinancePage() {
                 </div>
 
                 <p className="dm-hint">
-                  Send exactly <strong style={{ color: '#f6b353' }}>{pendingDeposit.btcAmount.toFixed(8)} BTC</strong> to the address above.
-                  Your balance will update after admin verification.
+                  Send exactly <strong style={{ color: '#f6b353' }}>{pendingDeposit.btcAmount.toFixed(8)} BTC</strong> to complete this receipt.
+                  Your credited balance appears after admin verification.
                 </p>
 
                 <div className="dm-actions">
                   <button className="dm-btn dm-finish" onClick={handleFinishDeposit}>
-                    Finish Deposit
+                    I Sent The Deposit
                   </button>
                   <button className="dm-btn dm-cancel" onClick={handleCancelDeposit}>
                     Cancel
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

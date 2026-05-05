@@ -8,7 +8,10 @@ export interface AiTradingSubscription {
   autoAmount: number;
   purchasedAt: string;
   expiresAt: string;
+  lastAccruedAt?: string;
   lastTradeAt?: string;
+  lockedAmount: number;
+  currentProfit: number;
   totalTrades: number;
   totalProfit: number;
   active: boolean;

@@ -63,7 +63,7 @@ function formatAiTimeRemaining(expiresAt?: string) {
 
 export default function TradePage() {
   const { user, updateUser } = useAuth();
-  const { btcPrice, btcChange24h, btcHigh24h, btcLow24h, trades, activeTrade, lastTradeResult, startTrade, clearTradeResult } = useApp();
+  const { btcPrice, btcChange24h, btcHigh24h, btcLow24h, trades, activeTrade, lastTradeResult, startTrade, clearTradeResult, addTrade } = useApp();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -96,6 +96,8 @@ export default function TradePage() {
   const aiSubscription = user?.aiTrading;
   const aiPlanConfig = getAiPlanConfig(selectedAiPlan);
   const aiTradeAmountValue = parseFloat(aiTradeAmount || '0');
+  const lockedAiAmount = aiSubscription?.active ? aiSubscription.lockedAmount || 0 : 0;
+  const availableUsdBalance = Math.max(0, (user?.usdBalance || 0) - lockedAiAmount);
   const tradeCountdown = activeTrade ? Math.max(0, Math.ceil((new Date(activeTrade.endTime).getTime() - nowMs) / 1000)) : 0;
   const activeUnrealized = activeTrade
     ? calculatePnL({
@@ -110,12 +112,30 @@ export default function TradePage() {
     () => trades.filter((trade) => trade.userEmail === user?.email),
     [trades, user?.email],
   );
+  const manualTrades = useMemo(
+    () => myTrades.filter((trade) => trade.source !== 'ai'),
+    [myTrades],
+  );
   const aiTrades = useMemo(
     () => myTrades.filter((trade) => trade.source === 'ai'),
     [myTrades],
   );
+  const aiTerminalLines = useMemo(() => {
+    const activeLabel = aiSubscription?.active ? 'RUNNING' : 'IDLE';
+    const planLabel = aiSubscription?.displayName || 'NO PLAN';
+    return [
+      `AI CORE STATUS :: ${activeLabel}`,
+      `PLAN PROFILE  :: ${planLabel}`,
+      `BTC PRICE FEED:: ${latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `LOCKED CAPITAL:: $${formatNumber(lockedAiAmount)}`,
+      `SESSION PROFIT:: $${formatNumber(aiSubscription?.currentProfit || 0)}`,
+      `AVAILABLE USD :: $${formatNumber(availableUsdBalance)}`,
+      `NEXT ACTION   :: ${aiSubscription?.active ? 'TRACKING BTC MICRO MOVES' : 'WAITING FOR AI SESSION'}`,
+      `TRADE WINDOW  :: ${aiSubscription?.active ? formatAiTimeRemaining(aiSubscription.expiresAt) : 'NOT STARTED'}`,
+    ];
+  }, [aiSubscription, availableUsdBalance, latestPrice, lockedAiAmount]);
   const tradeMarkers = useMemo<SeriesMarker<Time>[]>(() => {
-    const historyMarkers = myTrades.flatMap((trade) => {
+    const historyMarkers = manualTrades.flatMap((trade) => {
       const markers: SeriesMarker<Time>[] = [];
 
       if (isFiniteTimestamp(trade.entryTime)) {
@@ -158,7 +178,7 @@ export default function TradePage() {
         text: `${activeTrade.direction === 'up' ? 'BUY' : 'SELL'} $${formatNumber(activeTrade.amount)} ${activeTrade.leverage}x`,
       },
     ]);
-  }, [activeTrade, myTrades, user?.email]);
+  }, [activeTrade, manualTrades, user?.email]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -437,7 +457,7 @@ export default function TradePage() {
     }
     const parsedAmount = parseFloat(amount);
 
-    if (parsedAmount > (user?.usdBalance || 0)) {
+    if (parsedAmount > availableUsdBalance) {
       alert('Insufficient balance');
       return;
     }
@@ -478,17 +498,62 @@ export default function TradePage() {
       alert('Enter a valid AI trade amount.');
       return;
     }
-    if ((user.usdBalance || 0) < aiPlanConfig.price) {
+    if ((user.usdBalance || 0) < aiPlanConfig.price + aiTradeAmountValue) {
       alert('Your USD balance is too low for this AI plan.');
       return;
     }
+    if (user.aiTrading?.active) {
+      alert('Stop the current AI trade before starting a new one.');
+      return;
+    }
 
+    const nextSubscription = buildAiSubscription(selectedAiPlan, aiTradeAmountValue);
     updateUser({
       usdBalance: Math.max(0, user.usdBalance - aiPlanConfig.price),
-      aiTrading: buildAiSubscription(selectedAiPlan, aiTradeAmountValue),
+      aiTrading: {
+        ...nextSubscription,
+        totalTrades: user.aiTrading?.totalTrades || 0,
+        totalProfit: user.aiTrading?.totalProfit || 0,
+      },
     });
     setShowAiModal(false);
     setTradeMode('ai');
+  };
+
+  const handleStopAiTrade = () => {
+    if (!user?.aiTrading?.active) return;
+
+    addTrade({
+      id: `ai-stop-${Date.now()}`,
+      pair: 'BTC/USD',
+      direction: 'up',
+      amount: user.aiTrading.lockedAmount,
+      leverage: 1,
+      entryPrice: latestPrice,
+      exitPrice: latestPrice,
+      entryTime: Math.floor(new Date(user.aiTrading.purchasedAt).getTime() / 1000),
+      exitTime: Math.floor(Date.now() / 1000),
+      timeframe: `AI ${user.aiTrading.tradeWindowHours}h`,
+      status: 'won',
+      timestamp: new Date().toISOString(),
+      userEmail: user.email,
+      pnl: user.aiTrading.currentProfit,
+      priceMovePct: 0,
+      outcomeReason: 'expiry',
+      source: 'ai',
+      aiPlanTier: user.aiTrading.tier,
+    });
+
+    updateUser({
+      aiTrading: {
+        ...user.aiTrading,
+        active: false,
+        lockedAmount: 0,
+        lastTradeAt: new Date().toISOString(),
+        totalTrades: (user.aiTrading.totalTrades || 0) + 1,
+        totalProfit: (user.aiTrading.totalProfit || 0) + (user.aiTrading.currentProfit || 0),
+      },
+    });
   };
 
   const tradeButtonClass = useMemo(() => {
@@ -543,17 +608,17 @@ export default function TradePage() {
                   placeholder="100"
                 />
                 <div className="ai-helper-copy">
-                  This amount is the size the AI uses for each BTC auto-trade. Plan fee is paid from your USD balance.
+                  This amount is locked during the AI session. Profit grows slowly at `0.0001` per second for every `1000` in AI trade size.
                 </div>
               </div>
 
               <div className="trade-box">
                 <div className="trade-label">What AI trading does</div>
                 <div className="ai-feature-list">
-                  <div className="ai-feature-row">Uses a small recent BTC price trail to choose buy or sell direction.</div>
-                  <div className="ai-feature-row">Places auto-trades into your account history with live profit or loss results.</div>
-                  <div className="ai-feature-row">Updates your USD balance automatically based on each AI trade result.</div>
-                  <div className="ai-feature-row">Runs while your monthly plan is active and your balance covers the selected trade amount.</div>
+                  <div className="ai-feature-row">Locks your selected AI amount so it cannot be used by manual trades while the session is running.</div>
+                  <div className="ai-feature-row">Increases your balance slowly by the AI formula instead of jumping too high too fast.</div>
+                  <div className="ai-feature-row">Writes the finished AI session into trade history when the timer ends or when you stop it.</div>
+                  <div className="ai-feature-row">Lets you check a dedicated AI terminal view on phone and desktop instead of showing AI on the candlestick graph.</div>
                 </div>
               </div>
             </div>
@@ -1158,11 +1223,80 @@ export default function TradePage() {
           background: linear-gradient(135deg, #3478f6, #7fb0ff);
           color: #f8fbff;
         }
+        .ai-open-btn.secondary {
+          background: rgba(255,255,255,0.06);
+          color: #dce7f7;
+        }
+        .ai-open-btn.stop {
+          background: rgba(246,70,93,0.18);
+          color: #ff9fad;
+        }
         .ai-close-btn {
           min-height: 42px;
           padding: 0 16px;
           background: rgba(255,255,255,0.06);
           color: #d7dfeb;
+        }
+        .ai-mode-actions {
+          display: grid;
+          gap: 10px;
+          margin-top: 16px;
+        }
+        .ai-terminal-shell {
+          display: grid;
+          gap: 18px;
+          padding: 18px 22px 22px;
+          min-height: 520px;
+        }
+        .ai-terminal-head strong {
+          display: block;
+          color: #c6ffd7;
+          font-size: 20px;
+          font-weight: 800;
+        }
+        .ai-terminal-head span {
+          display: block;
+          margin-top: 6px;
+          color: #81b890;
+          font-size: 13px;
+        }
+        .ai-terminal-screen {
+          flex: 1;
+          min-height: 420px;
+          border-radius: 24px;
+          border: 1px solid rgba(54, 255, 133, 0.18);
+          background:
+            radial-gradient(circle at top left, rgba(40, 255, 128, 0.09), transparent 25%),
+            linear-gradient(180deg, #04110a, #020905);
+          box-shadow: inset 0 0 0 1px rgba(41, 91, 55, 0.18);
+          padding: 22px;
+          overflow: hidden;
+          position: relative;
+        }
+        .ai-terminal-screen::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.03) 0,
+            rgba(255,255,255,0.03) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+          pointer-events: none;
+          opacity: 0.18;
+        }
+        .ai-terminal-line {
+          position: relative;
+          z-index: 1;
+          color: #7dffad;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px;
+          line-height: 1.9;
+          letter-spacing: 0.02em;
+          text-shadow: 0 0 8px rgba(80, 255, 146, 0.22);
+          word-break: break-word;
         }
         .ai-modal {
           width: min(100%, 980px);
@@ -1457,6 +1591,14 @@ export default function TradePage() {
           .ai-modal {
             padding: 18px;
           }
+          .ai-terminal-shell {
+            padding: 14px 16px 18px;
+            min-height: 440px;
+          }
+          .ai-terminal-screen {
+            min-height: 340px;
+            padding: 16px;
+          }
           .ai-modal-head,
           .ai-summary-bar {
             flex-direction: column;
@@ -1520,67 +1662,86 @@ export default function TradePage() {
           </div>
         </div>
 
-        <div className="market-strip">
-          <div className="strip-item">
-            <div className="strip-label">24h High</div>
-            <div className="strip-value">${btcHigh24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          </div>
-          <div className="strip-item">
-            <div className="strip-label">24h Low</div>
-            <div className="strip-value">${btcLow24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          </div>
-          <div className="strip-item">
-            <div className="strip-label">Volume</div>
-            <div className="strip-value">{currentVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          </div>
-          <div className="strip-item">
-            <div className="strip-label">Tools</div>
-            <div className="strip-value" style={{ display: 'flex', gap: '10px' }}>
-              <BarChart2 size={18} />
-              <Activity size={18} />
-            </div>
-          </div>
-        </div>
-
-        <div className="chart-box">
-          <div ref={chartContainerRef} className="chart-canvas" />
-          {isChartLoading && <div className="chart-loading">Updating live BTC candles...</div>}
-          {isTrading && activeTrade && (
-            <div className={`live-trade-overlay ${activeTrade.direction === 'up' ? 'buy' : 'sell'}`}>
-              <div className="live-trade-main">
-                <div className={`live-trade-badge ${activeTrade.direction === 'up' ? 'buy' : 'sell'}`}>
-                  {activeTrade.direction === 'up' ? 'UP' : 'DOWN'}
-                </div>
-                <div className="live-trade-copy">
-                  <strong>
-                    {activeTrade.direction === 'up' ? 'Buy / Up' : 'Sell / Down'} ${formatNumber(activeTrade.amount)}
-                  </strong>
-                  <span>
-                    BTC/USD ${activeTrade.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • {activeTrade.leverage}x • {activeTrade.timeframe}
-                  </span>
+        {tradeMode === 'normal' ? (
+          <>
+            <div className="market-strip">
+              <div className="strip-item">
+                <div className="strip-label">24h High</div>
+                <div className="strip-value">${btcHigh24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+              </div>
+              <div className="strip-item">
+                <div className="strip-label">24h Low</div>
+                <div className="strip-value">${btcLow24h.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+              </div>
+              <div className="strip-item">
+                <div className="strip-label">Volume</div>
+                <div className="strip-value">{currentVolume.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+              </div>
+              <div className="strip-item">
+                <div className="strip-label">Tools</div>
+                <div className="strip-value" style={{ display: 'flex', gap: '10px' }}>
+                  <BarChart2 size={18} />
+                  <Activity size={18} />
                 </div>
               </div>
-              <div className="live-trade-stats">
-                <div className="live-trade-stat">
-                  <div className="live-trade-stat-label">Timer</div>
-                  <div className="live-trade-stat-value">{formatTradeCountdown(tradeCountdown)}</div>
-                </div>
-                <div className="live-trade-stat">
-                  <div className="live-trade-stat-label">Live PnL</div>
-                  <div className="live-trade-stat-value" style={{ color: (activeUnrealized?.pnl || 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
-                    {(activeUnrealized?.pnl || 0) >= 0 ? '+' : ''}${formatNumber(Math.abs(activeUnrealized?.pnl || 0))}
+            </div>
+
+            <div className="chart-box">
+              <div ref={chartContainerRef} className="chart-canvas" />
+              {isChartLoading && <div className="chart-loading">Updating live BTC candles...</div>}
+              {isTrading && activeTrade && (
+                <div className={`live-trade-overlay ${activeTrade.direction === 'up' ? 'buy' : 'sell'}`}>
+                  <div className="live-trade-main">
+                    <div className={`live-trade-badge ${activeTrade.direction === 'up' ? 'buy' : 'sell'}`}>
+                      {activeTrade.direction === 'up' ? 'UP' : 'DOWN'}
+                    </div>
+                    <div className="live-trade-copy">
+                      <strong>
+                        {activeTrade.direction === 'up' ? 'Buy / Up' : 'Sell / Down'} ${formatNumber(activeTrade.amount)}
+                      </strong>
+                      <span>
+                        BTC/USD ${activeTrade.entryPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • {activeTrade.leverage}x • {activeTrade.timeframe}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="live-trade-stats">
+                    <div className="live-trade-stat">
+                      <div className="live-trade-stat-label">Timer</div>
+                      <div className="live-trade-stat-value">{formatTradeCountdown(tradeCountdown)}</div>
+                    </div>
+                    <div className="live-trade-stat">
+                      <div className="live-trade-stat-label">Live PnL</div>
+                      <div className="live-trade-stat-value" style={{ color: (activeUnrealized?.pnl || 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
+                        {(activeUnrealized?.pnl || 0) >= 0 ? '+' : ''}${formatNumber(Math.abs(activeUnrealized?.pnl || 0))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+              {chartError && !isChartLoading && (
+                <div className="chart-fallback">
+                  <strong>Live BTC chart unavailable</strong>
+                  <div>The trade ticket is still available. Reload the page to retry the chart connection.</div>
+                </div>
+              )}
             </div>
-          )}
-          {chartError && !isChartLoading && (
-            <div className="chart-fallback">
-              <strong>Live BTC chart unavailable</strong>
-              <div>The trade ticket is still available. Reload the page to retry the chart connection.</div>
+          </>
+        ) : (
+          <div className="ai-terminal-shell">
+            <div className="ai-terminal-head">
+              <strong>AI Trade View</strong>
+              <span>Green terminal stream for live AI session status</span>
             </div>
-          )}
-        </div>
+            <div className="ai-terminal-screen">
+              {aiTerminalLines.map((line) => (
+                <div key={line} className="ai-terminal-line">{'>'} {line}</div>
+              ))}
+              <div className="ai-terminal-line">{'>'} SESSION RATE  :: ${((aiSubscription?.autoAmount || 0) / 1000 * 0.0001).toFixed(4)}/sec</div>
+              <div className="ai-terminal-line">{'>'} BTC AI CORE   :: SIGNAL LOCKED AND RUNNING</div>
+              <div className="ai-terminal-line">{'>'} USER STREAM   :: BALANCE GROWTH IS SLOW AND CONTROLLED</div>
+            </div>
+          </div>
+        )}
       </section>
 
       <aside className="trade-card trade-panel">
@@ -1589,9 +1750,9 @@ export default function TradePage() {
         <div className="ticket-topbar">
           <div className="ticket-topbar-copy">
             <strong>Margin Level</strong>
-            <span>Available balance</span>
+            <span>{tradeMode === 'ai' ? 'Available after AI lock' : 'Available balance'}</span>
           </div>
-          <div className="ticket-topbar-value">{formatNumber(user?.usdBalance || 0)}</div>
+          <div className="ticket-topbar-value">{formatNumber(availableUsdBalance)}</div>
         </div>
 
         <div className="ticket-pill-row">
@@ -1602,7 +1763,9 @@ export default function TradePage() {
             className={`ticket-pill ${tradeMode === 'ai' ? 'ai' : ''}`}
             onClick={() => {
               setTradeMode('ai');
-              setShowAiModal(true);
+              if (!aiSubscription?.active) {
+                setShowAiModal(true);
+              }
             }}
           >
             AI Trade
@@ -1726,17 +1889,17 @@ export default function TradePage() {
                 <div className="ai-metric-value">{aiSubscription?.displayName || 'None'}</div>
               </div>
               <div className="ai-metric">
-                <div className="ai-metric-label">Auto amount</div>
-                <div className="ai-metric-value">${formatNumber(aiSubscription?.autoAmount || 0)}</div>
+                <div className="ai-metric-label">AI trading amount</div>
+                <div className="ai-metric-value">${formatNumber(aiSubscription?.lockedAmount || 0)}</div>
               </div>
               <div className="ai-metric">
                 <div className="ai-metric-label">AI history</div>
                 <div className="ai-metric-value">{aiTrades.length}</div>
               </div>
               <div className="ai-metric">
-                <div className="ai-metric-label">AI profit</div>
-                <div className="ai-metric-value" style={{ color: (aiSubscription?.totalProfit || 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
-                  {(aiSubscription?.totalProfit || 0) >= 0 ? '+' : '-'}${formatNumber(Math.abs(aiSubscription?.totalProfit || 0))}
+                <div className="ai-metric-label">Current session</div>
+                <div className="ai-metric-value" style={{ color: (aiSubscription?.currentProfit || 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
+                  {(aiSubscription?.currentProfit || 0) >= 0 ? '+' : '-'}${formatNumber(Math.abs(aiSubscription?.currentProfit || 0))}
                 </div>
               </div>
             </div>
@@ -1750,9 +1913,19 @@ export default function TradePage() {
               </div>
             </div>
 
-            <button className="ai-open-btn" onClick={() => setShowAiModal(true)}>
-              {aiSubscription?.active ? 'Manage AI Plan' : 'Open AI Trading'}
-            </button>
+            <div className="ai-mode-actions">
+              <button className="ai-open-btn" onClick={() => setShowAiModal(true)}>
+                {aiSubscription?.active ? 'Manage AI Plan' : 'Open AI Trading'}
+              </button>
+              <button className="ai-open-btn secondary" onClick={() => setTradeMode('ai')}>
+                Check AI Trade
+              </button>
+              {aiSubscription?.active && (
+                <button className="ai-open-btn stop" onClick={handleStopAiTrade}>
+                  Stop AI Trading
+                </button>
+              )}
+            </div>
           </div>
         )}
 

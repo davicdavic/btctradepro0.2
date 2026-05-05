@@ -41,7 +41,7 @@ export function getAiPlanConfig(tier: AiPlanTier) {
 export function buildAiSubscription(tier: AiPlanTier, autoAmount: number): AiTradingSubscription {
   const config = getAiPlanConfig(tier);
   const purchasedAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + config.tradeWindowHours * 60 * 60 * 1000).toISOString();
 
   return {
     tier: config.tier,
@@ -51,8 +51,15 @@ export function buildAiSubscription(tier: AiPlanTier, autoAmount: number): AiTra
     autoAmount,
     purchasedAt,
     expiresAt,
+    lastAccruedAt: purchasedAt,
+    lockedAmount: autoAmount,
+    currentProfit: 0,
     totalTrades: 0,
     totalProfit: 0,
     active: true,
   };
+}
+
+export function getAiProfitPerSecond(amount: number) {
+  return (amount / 1000) * 0.0001;
 }
