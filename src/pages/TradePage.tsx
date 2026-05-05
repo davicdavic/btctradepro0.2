@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, IChartApi, IPriceLine, ISeriesApi, CandlestickData, HistogramData, SeriesMarker, Time } from 'lightweight-charts';
 import { Activity, BarChart2, TrendingDown, TrendingUp } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth, useApp } from '../App';
 import type { AiPlanDurationKey, AiPlanTier } from '../types';
 import { AI_PLAN_CATALOG, AI_PLAN_DURATIONS, buildAiSubscription, calculateAiPlanTotal, canStartAiSession, getAiDailyLimitSeconds, getAiDailyUsedSeconds, getAiDurationConfig, getAiPlanConfig, getAiRemainingSecondsForToday, isAiSubscriptionActive, toAiSessionDateKey } from '../utils/aiTrading';
@@ -86,6 +87,7 @@ const PREVIEW_MOVE_PCT = 0.3;
 export default function TradePage() {
   const { user, updateUser } = useAuth();
   const { btcPrice, btcChange24h, btcHigh24h, btcLow24h, trades, activeTrade, lastTradeResult, startTrade, clearTradeResult, addTrade } = useApp();
+  const [searchParams] = useSearchParams();
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -127,7 +129,7 @@ export default function TradePage() {
   const freeAiDays = user?.freeAiDays || 0;
   const aiUsedTodaySeconds = getAiDailyUsedSeconds(aiSubscription, nowMs);
   const aiRemainingTodaySeconds = getAiRemainingSecondsForToday(aiSubscription, nowMs);
-  const availableUsdBalance = Math.max(0, (user?.usdBalance || 0) - lockedAiAmount);
+  const availableUsdBalance = Math.max(0, user?.usdBalance || 0);
   const tradeCountdown = activeTrade ? Math.max(0, Math.ceil((new Date(activeTrade.endTime).getTime() - nowMs) / 1000)) : 0;
   const activeUnrealized = activeTrade
     ? calculatePnL({
@@ -211,6 +213,14 @@ export default function TradePage() {
       },
     ]);
   }, [activeTrade, manualTrades, user?.email]);
+
+  useEffect(() => {
+    if (searchParams.get('mode') !== 'ai') return;
+    setTradeMode('ai');
+    if (!hasPaidAiPlan && !aiSubscription?.active && !(user?.freeAiDays || 0)) {
+      setShowAiModal(true);
+    }
+  }, [aiSubscription?.active, hasPaidAiPlan, searchParams, user?.freeAiDays]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -2203,10 +2213,7 @@ export default function TradePage() {
 
             <div className="ai-mode-actions">
               <button className="ai-open-btn" onClick={() => setShowAiModal(true)}>
-                {hasPaidAiPlan ? 'Manage AI Plan' : 'Open AI Trading'}
-              </button>
-              <button className="ai-open-btn secondary" onClick={() => setTradeMode('ai')}>
-                Check AI Trade
+                {hasPaidAiPlan ? 'View AI Plans' : 'Open AI Trading'}
               </button>
               {hasPaidAiPlan && !aiSubscription?.active && (
                 <button className="ai-open-btn secondary" onClick={handleStartNextAiSession}>

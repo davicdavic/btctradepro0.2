@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Award, Camera, Check, FileText, Shield, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
 
 const COUNTRY_OPTIONS = [
@@ -731,6 +732,19 @@ export default function ProfilePage() {
               <span>Account ID</span>
               <strong>{user?.id || 'Not assigned'}</strong>
             </div>
+            <div className="account-chip">
+              <span>AI Trading</span>
+              <strong>{user?.aiTrading ? (user.aiTrading.displayName || 'Plan ready') : 'No active AI plan'}</strong>
+            </div>
+          </div>
+          <div style={{ marginTop: '18px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            <Link
+              to="/trade?mode=ai"
+              className="edit-btn save"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              Manage AI Plan
+            </Link>
           </div>
           <div className="form-grid">
             <div className="field"><label>Full Name</label><input value={formData.name} disabled={!editMode} onChange={(event) => setFormData({ ...formData, name: event.target.value })} /></div>
