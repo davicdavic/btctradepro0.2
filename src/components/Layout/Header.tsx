@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, LogOut, Settings, User, Wallet, Wifi, WifiOff } from 'lucide-react';
+import { Bell, ChevronDown, LogOut, Settings, User, Wallet } from 'lucide-react';
 import { useAuth } from '../../App';
 
 interface HeaderProps {
@@ -9,7 +9,7 @@ interface HeaderProps {
   marketStatus: 'live' | 'fallback';
 }
 
-export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderProps) {
+export default function Header({ btcPrice, btcChange24h }: HeaderProps) {
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -107,44 +107,78 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
         .header-ticker {
           gap: 8px;
           min-width: 0;
-          padding: 0;
           flex: 1;
           align-items: center;
-          white-space: nowrap;
-        }
-        .ticker-top {
-          display: flex;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 8px;
-          width: auto;
-          min-width: 0;
-        }
-        .ticker-middle {
-          display: flex;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 8px;
-          width: auto;
-          min-width: 0;
+          justify-content: flex-end;
         }
         .ticker-market-copy {
           display: flex;
-          flex-direction: row;
           align-items: center;
           gap: 10px;
           min-width: 0;
           width: 100%;
-          flex-wrap: wrap;
+        }
+        .market-tape {
+          flex: 1;
+          min-width: 0;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          overflow: hidden;
+        }
+        .market-tape-window {
+          overflow: hidden;
+          width: 100%;
+        }
+        .market-tape-track {
+          display: flex;
+          width: max-content;
+          animation: marketTapeScroll 24s linear infinite;
+        }
+        .market-tape-segment {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 14px;
+          white-space: nowrap;
+        }
+        .market-tape-label {
+          color: #8b98ad;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+        .market-tape-price {
+          color: #f5f7fb;
+          font-size: 13px;
+          font-weight: 800;
+          font-family: 'JetBrains Mono', monospace;
+        }
+        .market-tape-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.18);
+          flex-shrink: 0;
+        }
+        @keyframes marketTapeScroll {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-50%);
+          }
         }
         .ticker-cash-card {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 0;
-          border-radius: 0;
-          background: transparent;
-          border: none;
+          padding: 6px 10px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
         .ticker-cash-copy {
           min-width: 0;
@@ -156,22 +190,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           margin-bottom: 0;
         }
         .ticker-cash-copy .summary-value {
-          white-space: nowrap;
-        }
-        .ticker-top .status-chip {
-          display: none;
-        }
-        .ticker-symbol {
-          color: #f5f7fb;
-          font-size: 12px;
-          font-weight: 800;
-          white-space: nowrap;
-        }
-        .ticker-price {
-          color: #f5f7fb;
-          font-size: 15px;
-          font-weight: 800;
-          font-family: 'JetBrains Mono', monospace;
           white-space: nowrap;
         }
         .ticker-change {
@@ -414,16 +432,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
         .summary-user-name {
           font-size: 13px;
         }
-        .status-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          color: ${marketStatus === 'live' ? '#0ecb81' : '#f7931a'};
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.6px;
-        }
         @media (max-width: 1023px) {
         }
         @media (max-width: 720px) {
@@ -439,47 +447,40 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
             font-size: 12px;
           }
           .header-ticker {
-            padding: 0;
             gap: 6px;
-            border-radius: 0;
-            background: transparent;
-            border-color: transparent;
-            box-shadow: none;
-          }
-          .ticker-symbol {
-            font-size: 8px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
           }
           .ticker-market-copy {
             gap: 6px;
+            flex-direction: column;
+            align-items: stretch;
           }
-          .ticker-price {
-            font-size: 13px;
-            line-height: 1;
+          .market-tape {
+            border-radius: 12px;
+          }
+          .market-tape-segment {
+            gap: 10px;
+            padding: 7px 10px;
+          }
+          .market-tape-label {
+            font-size: 9px;
+            letter-spacing: 0.12em;
+          }
+          .market-tape-price {
+            font-size: 12px;
+          }
+          .ticker-cash-card {
+            padding: 5px 8px;
+            border-radius: 12px;
+            align-self: flex-start;
           }
           .ticker-change {
             font-size: 9px;
             padding: 2px 6px;
             flex-shrink: 0;
           }
-          .header-right .status-chip {
-            display: none;
-          }
-          .ticker-top .status-chip {
-            display: inline-flex;
-            font-size: 8px;
-            padding: 0;
-            letter-spacing: 0.08em;
-            flex-shrink: 0;
-          }
           .notification-dropdown {
             width: min(88vw, 320px);
             max-height: min(64vh, 420px);
-          }
-          .status-chip {
-            font-size: 10px;
-            gap: 4px;
           }
           .menu-backdrop {
             display: block;
@@ -551,20 +552,39 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
 
         <div className="header-ticker">
           <div className="ticker-market-copy">
-            <div className="ticker-top">
-              <span className="ticker-symbol">BTC/USD</span>
-              <div className="status-chip">
-                {marketStatus === 'live' ? <Wifi size={14} /> : <WifiOff size={14} />}
-                {marketStatus}
+            <div className="market-tape" aria-label="BTC market ticker">
+              <div className="market-tape-window">
+                <div className="market-tape-track">
+                  {[0, 1].map((segment) => (
+                    <div key={segment} className="market-tape-segment">
+                      <span className="market-tape-label">BTC Spot</span>
+                      <span className="market-tape-price">
+                        ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
+                        {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+                      </span>
+                      <span className="market-tape-dot" />
+                      <span className="market-tape-label">BTC Live</span>
+                      <span className="market-tape-price">
+                        ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
+                        {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+                      </span>
+                      <span className="market-tape-dot" />
+                      <span className="market-tape-label">BTC Market</span>
+                      <span className="market-tape-price">
+                        ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
+                        {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+                      </span>
+                      <span className="market-tape-dot" />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="ticker-middle">
-              <span className="ticker-price">
-                ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
-                {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
-              </span>
             </div>
             <div className="ticker-cash-card">
               <div className="ticker-cash-copy">
@@ -654,24 +674,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="header-summary">
-        <div className="summary-card summary-user-card">
-          <div className="profile-chip">
-            <div className="user-avatar">
-              {user?.avatar ? <img src={user.avatar} alt={user.name || 'User'} /> : (user?.name?.charAt(0).toUpperCase() || 'U')}
-            </div>
-            <div>
-              <div className="summary-label">Signed In</div>
-              <div className="summary-value summary-user-name">{user?.name || 'User'}</div>
-            </div>
-          </div>
-          <div className="status-chip">
-            {marketStatus === 'live' ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {marketStatus}
           </div>
         </div>
       </div>
