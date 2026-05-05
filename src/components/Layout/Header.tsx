@@ -136,6 +136,27 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           gap: 2px;
           min-width: 0;
         }
+        .ticker-cash-card {
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .ticker-cash-copy {
+          min-width: 0;
+        }
+        .ticker-cash-copy .summary-label {
+          display: block;
+          margin-bottom: 4px;
+        }
+        .ticker-cash-copy .summary-value {
+          white-space: nowrap;
+        }
         .ticker-top .status-chip {
           display: none;
         }
@@ -364,7 +385,7 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
         .header-summary {
           width: 100%;
           display: grid;
-          grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+          grid-template-columns: auto;
           gap: 12px;
         }
         .summary-card {
@@ -415,10 +436,7 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
             display: none;
           }
           .header-summary {
-            grid-template-columns: 1fr 1fr;
-          }
-          .summary-card:last-child {
-            grid-column: 1 / -1;
+            grid-template-columns: 1fr;
           }
         }
         @media (max-width: 720px) {
@@ -451,6 +469,9 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
           }
           .ticker-market-copy {
             gap: 2px;
+          }
+          .ticker-cash-card {
+            width: 100%;
           }
           .ticker-price {
             font-size: 13px;
@@ -495,7 +516,7 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
             gap: 10px;
           }
           .header-summary {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 6px;
           }
           .profile-chip {
@@ -590,20 +611,33 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
         </div>
 
         <div className="header-ticker">
-          <div className="ticker-top">
-            <span className="ticker-symbol">BTC/USD</span>
-            <div className="status-chip">
-              {marketStatus === 'live' ? <Wifi size={14} /> : <WifiOff size={14} />}
-              {marketStatus}
+          <div className="ticker-market-copy">
+            <div className="ticker-top">
+              <span className="ticker-symbol">BTC/USD</span>
+              <div className="status-chip">
+                {marketStatus === 'live' ? <Wifi size={14} /> : <WifiOff size={14} />}
+                {marketStatus}
+              </div>
             </div>
-          </div>
-          <div className="ticker-middle">
-            <span className="ticker-price">
-              ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
-              {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
-            </span>
+            <div className="ticker-middle">
+              <span className="ticker-price">
+                ${btcPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
+                {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+              </span>
+            </div>
+            <div className="ticker-cash-card">
+              <div className="ticker-cash-copy">
+                <div className="summary-label">Cash Balance</div>
+                <div className="summary-value">
+                  ${(user?.usdBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
+                {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+              </div>
+            </div>
           </div>
         </div>
 
@@ -686,18 +720,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
       </div>
 
       <div className="header-summary">
-        <div className="summary-card">
-          <div>
-            <div className="summary-label">Cash Balance</div>
-            <div className="summary-value">
-              ${(user?.usdBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-          <div className={`ticker-change ${btcChange24h >= 0 ? 'positive' : 'negative'}`}>
-            {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
-          </div>
-        </div>
-
         <div className="summary-card summary-user-card">
           <div className="profile-chip">
             <div className="user-avatar">

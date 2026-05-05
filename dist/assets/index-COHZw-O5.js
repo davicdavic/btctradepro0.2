@@ -589,6 +589,27 @@ Error generating stack: `+s.message+`
           gap: 2px;
           min-width: 0;
         }
+        .ticker-cash-card {
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .ticker-cash-copy {
+          min-width: 0;
+        }
+        .ticker-cash-copy .summary-label {
+          display: block;
+          margin-bottom: 4px;
+        }
+        .ticker-cash-copy .summary-value {
+          white-space: nowrap;
+        }
         .ticker-top .status-chip {
           display: none;
         }
@@ -817,7 +838,7 @@ Error generating stack: `+s.message+`
         .header-summary {
           width: 100%;
           display: grid;
-          grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+          grid-template-columns: auto;
           gap: 12px;
         }
         .summary-card {
@@ -868,10 +889,7 @@ Error generating stack: `+s.message+`
             display: none;
           }
           .header-summary {
-            grid-template-columns: 1fr 1fr;
-          }
-          .summary-card:last-child {
-            grid-column: 1 / -1;
+            grid-template-columns: 1fr;
           }
         }
         @media (max-width: 720px) {
@@ -904,6 +922,9 @@ Error generating stack: `+s.message+`
           }
           .ticker-market-copy {
             gap: 2px;
+          }
+          .ticker-cash-card {
+            width: 100%;
           }
           .ticker-price {
             font-size: 13px;
@@ -948,7 +969,7 @@ Error generating stack: `+s.message+`
             gap: 10px;
           }
           .header-summary {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 6px;
           }
           .profile-chip {
@@ -1032,7 +1053,7 @@ Error generating stack: `+s.message+`
             border-radius: 12px;
           }
         }
-      `}),a.jsxs("div",{className:"header-main",children:[a.jsxs("div",{className:"header-brand",children:[a.jsx("div",{className:"brand-icon",children:"₿"}),a.jsx("div",{className:"brand-copy",children:a.jsx("h1",{children:"BTC Trade Pro"})})]}),a.jsxs("div",{className:"header-ticker",children:[a.jsxs("div",{className:"ticker-top",children:[a.jsx("span",{className:"ticker-symbol",children:"BTC/USD"}),a.jsxs("div",{className:"status-chip",children:[i==="live"?a.jsx(qu,{size:14}):a.jsx(Uu,{size:14}),i]})]}),a.jsxs("div",{className:"ticker-middle",children:[a.jsxs("span",{className:"ticker-price",children:["$",t.toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]}),a.jsxs("span",{className:`ticker-change ${e>=0?"positive":"negative"}`,children:[e>=0?"+":"",e.toFixed(2),"%"]})]})]}),a.jsxs("div",{className:"header-right",children:[a.jsx("div",{className:"balance-badge",children:a.jsxs("div",{children:[a.jsx("span",{className:"balance-label",children:"USD"}),a.jsxs("span",{className:"balance-value",children:["$",((n==null?void 0:n.usdBalance)||0).toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]})]})}),a.jsxs("div",{className:"user-menu",ref:u,children:[c&&a.jsx("button",{type:"button",className:"menu-backdrop",onClick:()=>o(!1),"aria-label":"Close notifications"}),a.jsxs("button",{className:"header-btn",onClick:()=>o(!c),children:[a.jsx(k1,{size:20}),a.jsx("span",{className:"notification-dot"})]}),c&&a.jsxs("div",{className:"dropdown notification-dropdown",children:[a.jsxs("div",{className:"notification-header",children:[a.jsx("span",{className:"notification-title",children:"Notifications"}),a.jsx("span",{style:{color:"#3478f6",fontSize:"12px",cursor:"pointer"},children:"Mark all as read"})]}),h.map(p=>a.jsxs("div",{className:"notification-item",children:[a.jsx("div",{className:"notification-icon",children:a.jsx(Bi,{size:16})}),a.jsxs("div",{className:"notification-content",children:[a.jsx("div",{className:"notification-item-title",children:p.title}),a.jsx("div",{className:"notification-message",children:p.message}),a.jsx("div",{className:"notification-time",children:p.time})]}),p.unread&&a.jsx("div",{className:"unread-dot"})]},p.id))]})]}),a.jsxs("div",{className:"user-menu",ref:d,children:[s&&a.jsx("button",{type:"button",className:"menu-backdrop",onClick:()=>l(!1),"aria-label":"Close profile menu"}),a.jsxs("button",{className:"user-btn",onClick:()=>l(!s),children:[a.jsx("div",{className:"user-avatar",children:n!=null&&n.avatar?a.jsx("img",{src:n.avatar,alt:n.name||"User"}):((f=n==null?void 0:n.name)==null?void 0:f.charAt(0).toUpperCase())||"U"}),a.jsx("span",{className:"user-name",children:(n==null?void 0:n.name)||"User"}),a.jsx(C1,{size:16,color:"#888"})]}),s&&a.jsxs("div",{className:"dropdown",children:[a.jsxs("div",{className:"dropdown-header",children:[a.jsx("div",{className:"dropdown-name",children:n==null?void 0:n.name}),a.jsx("div",{className:"dropdown-email",children:n==null?void 0:n.email})]}),a.jsxs(xe,{to:"/profile",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Ur,{size:16}),"Profile"]}),a.jsxs(xe,{to:"/finance",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Bi,{size:16}),"Wallet"]}),a.jsxs(xe,{to:"/profile",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Tm,{size:16}),"Settings"]}),a.jsxs("button",{className:"dropdown-item danger",onClick:()=>{r(),l(!1)},children:[a.jsx(Em,{size:16}),"Sign Out"]})]})]})]})]}),a.jsxs("div",{className:"header-summary",children:[a.jsxs("div",{className:"summary-card",children:[a.jsxs("div",{children:[a.jsx("div",{className:"summary-label",children:"Cash Balance"}),a.jsxs("div",{className:"summary-value",children:["$",((n==null?void 0:n.usdBalance)||0).toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]})]}),a.jsxs("div",{className:`ticker-change ${e>=0?"positive":"negative"}`,children:[e>=0?"+":"",e.toFixed(2),"%"]})]}),a.jsxs("div",{className:"summary-card summary-user-card",children:[a.jsxs("div",{className:"profile-chip",children:[a.jsx("div",{className:"user-avatar",children:n!=null&&n.avatar?a.jsx("img",{src:n.avatar,alt:n.name||"User"}):((g=n==null?void 0:n.name)==null?void 0:g.charAt(0).toUpperCase())||"U"}),a.jsxs("div",{children:[a.jsx("div",{className:"summary-label",children:"Signed In"}),a.jsx("div",{className:"summary-value summary-user-name",children:(n==null?void 0:n.name)||"User"})]})]}),a.jsxs("div",{className:"status-chip",children:[i==="live"?a.jsx(qu,{size:14}):a.jsx(Uu,{size:14}),i]})]})]})]})}const W1=[{path:"/",label:"Home",icon:Cm},{path:"/trade",label:"Trade",icon:Wr},{path:"/news",label:"News",icon:_r},{path:"/finance",label:"Wallet",icon:Bi},{path:"/profile",label:"Profile",icon:Ur}],U1=[{path:"/admin",label:"Admin",icon:id}];function q1(){const{user:t}=vi(),e=(t==null?void 0:t.role)==="admin"?U1:W1;return a.jsxs("nav",{className:"mobile-nav-shell",children:[a.jsx("style",{children:`
+      `}),a.jsxs("div",{className:"header-main",children:[a.jsxs("div",{className:"header-brand",children:[a.jsx("div",{className:"brand-icon",children:"₿"}),a.jsx("div",{className:"brand-copy",children:a.jsx("h1",{children:"BTC Trade Pro"})})]}),a.jsx("div",{className:"header-ticker",children:a.jsxs("div",{className:"ticker-market-copy",children:[a.jsxs("div",{className:"ticker-top",children:[a.jsx("span",{className:"ticker-symbol",children:"BTC/USD"}),a.jsxs("div",{className:"status-chip",children:[i==="live"?a.jsx(qu,{size:14}):a.jsx(Uu,{size:14}),i]})]}),a.jsxs("div",{className:"ticker-middle",children:[a.jsxs("span",{className:"ticker-price",children:["$",t.toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]}),a.jsxs("span",{className:`ticker-change ${e>=0?"positive":"negative"}`,children:[e>=0?"+":"",e.toFixed(2),"%"]})]}),a.jsxs("div",{className:"ticker-cash-card",children:[a.jsxs("div",{className:"ticker-cash-copy",children:[a.jsx("div",{className:"summary-label",children:"Cash Balance"}),a.jsxs("div",{className:"summary-value",children:["$",((n==null?void 0:n.usdBalance)||0).toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]})]}),a.jsxs("div",{className:`ticker-change ${e>=0?"positive":"negative"}`,children:[e>=0?"+":"",e.toFixed(2),"%"]})]})]})}),a.jsxs("div",{className:"header-right",children:[a.jsx("div",{className:"balance-badge",children:a.jsxs("div",{children:[a.jsx("span",{className:"balance-label",children:"USD"}),a.jsxs("span",{className:"balance-value",children:["$",((n==null?void 0:n.usdBalance)||0).toLocaleString(void 0,{minimumFractionDigits:2,maximumFractionDigits:2})]})]})}),a.jsxs("div",{className:"user-menu",ref:u,children:[c&&a.jsx("button",{type:"button",className:"menu-backdrop",onClick:()=>o(!1),"aria-label":"Close notifications"}),a.jsxs("button",{className:"header-btn",onClick:()=>o(!c),children:[a.jsx(k1,{size:20}),a.jsx("span",{className:"notification-dot"})]}),c&&a.jsxs("div",{className:"dropdown notification-dropdown",children:[a.jsxs("div",{className:"notification-header",children:[a.jsx("span",{className:"notification-title",children:"Notifications"}),a.jsx("span",{style:{color:"#3478f6",fontSize:"12px",cursor:"pointer"},children:"Mark all as read"})]}),h.map(p=>a.jsxs("div",{className:"notification-item",children:[a.jsx("div",{className:"notification-icon",children:a.jsx(Bi,{size:16})}),a.jsxs("div",{className:"notification-content",children:[a.jsx("div",{className:"notification-item-title",children:p.title}),a.jsx("div",{className:"notification-message",children:p.message}),a.jsx("div",{className:"notification-time",children:p.time})]}),p.unread&&a.jsx("div",{className:"unread-dot"})]},p.id))]})]}),a.jsxs("div",{className:"user-menu",ref:d,children:[s&&a.jsx("button",{type:"button",className:"menu-backdrop",onClick:()=>l(!1),"aria-label":"Close profile menu"}),a.jsxs("button",{className:"user-btn",onClick:()=>l(!s),children:[a.jsx("div",{className:"user-avatar",children:n!=null&&n.avatar?a.jsx("img",{src:n.avatar,alt:n.name||"User"}):((f=n==null?void 0:n.name)==null?void 0:f.charAt(0).toUpperCase())||"U"}),a.jsx("span",{className:"user-name",children:(n==null?void 0:n.name)||"User"}),a.jsx(C1,{size:16,color:"#888"})]}),s&&a.jsxs("div",{className:"dropdown",children:[a.jsxs("div",{className:"dropdown-header",children:[a.jsx("div",{className:"dropdown-name",children:n==null?void 0:n.name}),a.jsx("div",{className:"dropdown-email",children:n==null?void 0:n.email})]}),a.jsxs(xe,{to:"/profile",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Ur,{size:16}),"Profile"]}),a.jsxs(xe,{to:"/finance",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Bi,{size:16}),"Wallet"]}),a.jsxs(xe,{to:"/profile",className:"dropdown-item",onClick:()=>l(!1),children:[a.jsx(Tm,{size:16}),"Settings"]}),a.jsxs("button",{className:"dropdown-item danger",onClick:()=>{r(),l(!1)},children:[a.jsx(Em,{size:16}),"Sign Out"]})]})]})]})]}),a.jsx("div",{className:"header-summary",children:a.jsxs("div",{className:"summary-card summary-user-card",children:[a.jsxs("div",{className:"profile-chip",children:[a.jsx("div",{className:"user-avatar",children:n!=null&&n.avatar?a.jsx("img",{src:n.avatar,alt:n.name||"User"}):((g=n==null?void 0:n.name)==null?void 0:g.charAt(0).toUpperCase())||"U"}),a.jsxs("div",{children:[a.jsx("div",{className:"summary-label",children:"Signed In"}),a.jsx("div",{className:"summary-value summary-user-name",children:(n==null?void 0:n.name)||"User"})]})]}),a.jsxs("div",{className:"status-chip",children:[i==="live"?a.jsx(qu,{size:14}):a.jsx(Uu,{size:14}),i]})]})})]})}const W1=[{path:"/",label:"Home",icon:Cm},{path:"/trade",label:"Trade",icon:Wr},{path:"/news",label:"News",icon:_r},{path:"/finance",label:"Wallet",icon:Bi},{path:"/profile",label:"Profile",icon:Ur}],U1=[{path:"/admin",label:"Admin",icon:id}];function q1(){const{user:t}=vi(),e=(t==null?void 0:t.role)==="admin"?U1:W1;return a.jsxs("nav",{className:"mobile-nav-shell",children:[a.jsx("style",{children:`
         .mobile-nav-shell {
           position: fixed;
           left: 0;
