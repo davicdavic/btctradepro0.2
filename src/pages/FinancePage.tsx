@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Check, Copy, Lock, RefreshCw, Wallet, X } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Check, Copy, Lock, Wallet, X } from 'lucide-react';
 import { useAuth, useApp } from '../App';
 import type { Transaction } from '../types';
 import { DEPOSIT_WALLET, formatNumber } from '../utils/mockData';
