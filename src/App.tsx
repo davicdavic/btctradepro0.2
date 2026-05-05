@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ActiveTrade, KycRequest, TradeResolution, User, Transaction, Trade, WalletRequest } from './types';
 import { DEFAULT_BTC_AVATAR, DEPOSIT_WALLET, mockUser } from './utils/mockData';
+import { getAiPlanConfig } from './utils/aiTrading';
 import { createFallbackSnapshot, fetchBtcSnapshot, subscribeBtcTicker } from './utils/marketApi';
 import { calculatePnL } from './utils/tradeEngine';
 
@@ -28,6 +29,7 @@ const TRADES_KEY = 'btcTrades';
 const ACTIVE_TRADE_KEY = 'btcActiveTrade';
 const TRADE_RESULT_KEY = 'btcTradeResult';
 const KYC_REQUESTS_KEY = 'btcKycRequests';
+const AI_TRADE_INTERVAL_MS = 20000;
 
 interface AuthContextType {
   user: User | null;
@@ -140,6 +142,26 @@ function getDefaultTimezone() {
   return window.Intl?.DateTimeFormat?.().resolvedOptions().timeZone || 'UTC';
 }
 
+function normalizeAiTrading(input: User['aiTrading']): User['aiTrading'] {
+  if (!input) return undefined;
+  const config = getAiPlanConfig(input.tier);
+
+  return {
+    ...input,
+    tier: config.tier,
+    displayName: asString(input.displayName, config.name),
+    price: asNumber(input.price, config.price),
+    tradeWindowHours: asNumber(input.tradeWindowHours, config.tradeWindowHours),
+    autoAmount: asNumber(input.autoAmount),
+    purchasedAt: asString(input.purchasedAt, new Date().toISOString()),
+    expiresAt: asString(input.expiresAt, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+    lastTradeAt: input.lastTradeAt ? asString(input.lastTradeAt) : undefined,
+    totalTrades: asNumber(input.totalTrades),
+    totalProfit: asNumber(input.totalProfit),
+    active: Boolean(input.active),
+  };
+}
+
 function normalizeUser(input: User): User {
   const defaultUser = defaultUsersByEmail.get(asString(input.email).toLowerCase());
 
@@ -155,6 +177,7 @@ function normalizeUser(input: User): User {
     stakeAmount: asNumber(input.stakeAmount),
     vipLevel: asNumber(input.vipLevel),
     joinedDate: asString(input.joinedDate, new Date().toISOString().slice(0, 10)),
+    aiTrading: normalizeAiTrading(input.aiTrading),
     kyc: input.kyc
       ? {
           ...input.kyc,
@@ -312,6 +335,8 @@ function normalizeTrade(input: Trade): Trade {
     userEmail: input.userEmail ? asString(input.userEmail) : input.userEmail,
     pnl: input.pnl === undefined ? undefined : asNumber(input.pnl),
     priceMovePct: input.priceMovePct === undefined ? undefined : asNumber(input.priceMovePct),
+    source: input.source === 'ai' ? 'ai' : 'manual',
+    aiPlanTier: input.aiPlanTier,
   };
 }
 
@@ -465,6 +490,7 @@ function App() {
   });
   const [marketSnapshot, setMarketSnapshot] = useState(() => createFallbackSnapshot());
   const [marketReady, setMarketReady] = useState(false);
+  const [marketTrail, setMarketTrail] = useState<Array<{ price: number; timestamp: number }>>([]);
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     if (typeof window === 'undefined') return [];
     return readTransactions();
@@ -551,6 +577,21 @@ function App() {
       removeStorageKey(AUTH_SESSION_KEY);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!marketReady || !Number.isFinite(marketSnapshot.price) || marketSnapshot.price <= 0) return;
+
+    setMarketTrail((prev) => {
+      const nextPoint = { price: marketSnapshot.price, timestamp: Date.now() };
+      if (prev.length > 0) {
+        const last = prev[prev.length - 1];
+        if (last.price === nextPoint.price && nextPoint.timestamp - last.timestamp < 3000) {
+          return prev;
+        }
+      }
+      return [...prev.slice(-29), nextPoint];
+    });
+  }, [marketReady, marketSnapshot.price]);
 
   // Keep mockData DEPOSIT_WALLET in sync with admin-configured address
   useEffect(() => {
@@ -894,6 +935,91 @@ function App() {
       window.clearInterval(interval);
     };
   }, [activeTrade, marketSnapshot.price, user]);
+
+  useEffect(() => {
+    if (!user || user.role === 'admin' || !user.aiTrading) return;
+
+    const subscription = user.aiTrading;
+    const expiryTime = new Date(subscription.expiresAt).getTime();
+
+    if (subscription.active && Number.isFinite(expiryTime) && expiryTime <= Date.now()) {
+      updateUser({
+        aiTrading: {
+          ...subscription,
+          active: false,
+        },
+      });
+      return;
+    }
+
+    if (!subscription.active || marketTrail.length < 6) return;
+    if ((user.usdBalance || 0) < subscription.autoAmount) return;
+
+    const lastTradeTime = subscription.lastTradeAt ? new Date(subscription.lastTradeAt).getTime() : 0;
+    if (Date.now() - lastTradeTime < AI_TRADE_INTERVAL_MS) return;
+
+    const recent = marketTrail.slice(-6);
+    const firstPrice = recent[0]?.price || marketSnapshot.price;
+    const lastPrice = recent[recent.length - 1]?.price || marketSnapshot.price;
+    const highPrice = Math.max(...recent.map((entry) => entry.price));
+    const lowPrice = Math.min(...recent.map((entry) => entry.price));
+    const rawMove = (lastPrice - firstPrice) / Math.max(firstPrice, 1);
+    const volatility = (highPrice - lowPrice) / Math.max(firstPrice, 1);
+    const direction: 'up' | 'down' = rawMove >= 0 ? 'up' : 'down';
+    const strategyBias = Math.min(0.78, Math.max(0.55, 0.58 + volatility * 8 + Math.abs(rawMove) * 5));
+    const won = Math.random() < strategyBias;
+    const directionalShift = Math.max(0.0012, Math.abs(rawMove) + volatility * 0.4);
+    const signedShift = direction === 'up'
+      ? (won ? directionalShift : -directionalShift)
+      : (won ? -directionalShift : directionalShift);
+    const exitPrice = marketSnapshot.price * (1 + signedShift);
+    const planConfig = getAiPlanConfig(subscription.tier);
+    const resolution = calculatePnL({
+      entryPrice: marketSnapshot.price,
+      exitPrice,
+      amount: subscription.autoAmount,
+      leverageValue: planConfig.leverage,
+      tradeDirection: direction,
+    });
+    const nowIso = new Date().toISOString();
+    const nowUnix = Math.floor(Date.now() / 1000);
+
+    const aiTrade: Trade = {
+      id: `ai-${Date.now()}`,
+      pair: 'BTC/USD',
+      direction,
+      amount: subscription.autoAmount,
+      leverage: planConfig.leverage,
+      entryPrice: marketSnapshot.price,
+      exitPrice,
+      entryTime: nowUnix,
+      exitTime: nowUnix,
+      timeframe: `AI ${subscription.tradeWindowHours}h`,
+      status: resolution.pnl >= 0 ? 'won' : 'lost',
+      timestamp: nowIso,
+      userEmail: user.email,
+      pnl: resolution.pnl,
+      priceMovePct: resolution.directionalMovePct,
+      outcomeReason: 'expiry',
+      source: 'ai',
+      aiPlanTier: subscription.tier,
+    };
+
+    setTrades((prev) => [aiTrade, ...prev]);
+    replaceUser(user.email, (entry) => ({
+      ...entry,
+      usdBalance: Math.max(0, entry.usdBalance + resolution.pnl),
+      aiTrading: entry.aiTrading
+        ? {
+            ...entry.aiTrading,
+            active: new Date(entry.aiTrading.expiresAt).getTime() > Date.now(),
+            lastTradeAt: nowIso,
+            totalTrades: (entry.aiTrading.totalTrades || 0) + 1,
+            totalProfit: (entry.aiTrading.totalProfit || 0) + resolution.pnl,
+          }
+        : entry.aiTrading,
+    }));
+  }, [marketSnapshot.price, marketTrail, user]);
 
   const approveTransaction = (txId: string) => {
     const target = walletRequests.find((entry) => entry.id === txId) || transactions.find((entry) => entry.id === txId);

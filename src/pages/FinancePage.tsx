@@ -127,7 +127,7 @@ export default function FinancePage() {
     <>
       {/* Deposit Modal */}
       {showDepositModal && pendingDeposit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6">
           <div className="deposit-modal">
             <style>{`
               .deposit-modal {
@@ -136,8 +136,10 @@ export default function FinancePage() {
                 border-radius: 28px;
                 box-shadow: 0 40px 120px rgba(0,0,0,0.5);
                 padding: 36px;
-                max-width: 420px;
-                width: 90%;
+                max-width: 460px;
+                width: min(100%, 460px);
+                max-height: min(100vh - 32px, 820px);
+                overflow-y: auto;
                 display: grid;
                 gap: 22px;
                 animation: modalIn 0.25s ease;
@@ -187,6 +189,10 @@ export default function FinancePage() {
                 display: flex; justify-content: center; padding: 16px;
                 background: #fff; border-radius: 20px;
               }
+              .dm-qr svg {
+                width: min(100%, 180px);
+                height: auto;
+              }
               .dm-address-box {
                 display: flex; align-items: center; gap: 10px;
                 padding: 14px; border-radius: 16px;
@@ -234,6 +240,36 @@ export default function FinancePage() {
               }
               @keyframes spin { to { transform: rotate(360deg); } }
               .dm-checking p { color: #8fa2ba; font-size: 14px; line-height: 1.6; }
+              @media (max-width: 640px) {
+                .deposit-modal {
+                  width: 100%;
+                  padding: 20px;
+                  gap: 18px;
+                  border-radius: 22px;
+                  max-height: calc(100vh - 24px);
+                }
+                .dm-head h2 {
+                  font-size: 20px;
+                }
+                .dm-btc-val {
+                  font-size: 26px;
+                }
+                .dm-qr {
+                  padding: 12px;
+                  border-radius: 18px;
+                }
+                .dm-address-box {
+                  align-items: stretch;
+                  flex-direction: column;
+                }
+                .dm-copy-btn {
+                  width: 100%;
+                  height: 44px;
+                }
+                .dm-actions {
+                  grid-template-columns: 1fr;
+                }
+              }
             `}</style>
 
             <div className="dm-head">

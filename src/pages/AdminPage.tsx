@@ -2,11 +2,20 @@ import { useState } from 'react';
 import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, UserRound, Wallet2, XCircle } from 'lucide-react';
 import { useApp } from '../App';
 import { formatNumber } from '../utils/mockData';
+import type { KycRequest, User, WalletRequest } from '../types';
 
 function formatTimestamp(value?: string) {
   if (!value) return 'Not available';
   return new Date(value).toLocaleString();
 }
+
+function formatDocumentType(value: KycRequest['documentType']) {
+  return value.replace('_', ' ');
+}
+
+type ReviewTarget =
+  | { kind: 'wallet'; request: WalletRequest; user?: User }
+  | { kind: 'kyc'; request: KycRequest; user?: User };
 
 export default function AdminPage() {
   const {
@@ -24,6 +33,7 @@ export default function AdminPage() {
   const [editingWallet, setEditingWallet] = useState(false);
   const [walletDraft, setWalletDraft] = useState(walletAddress);
   const [walletSaved, setWalletSaved] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<ReviewTarget | null>(null);
 
   const handleSaveWallet = () => {
     if (!walletDraft.trim()) return;
@@ -59,6 +69,7 @@ export default function AdminPage() {
   const approvedUsers = registeredUsers.filter((entry) => entry.verificationStatus === 'approved').length;
   const pendingUsers = registeredUsers.filter((entry) => entry.verificationStatus === 'pending').length;
   const totalWalletVolume = pendingWalletRequests.reduce((sum, entry) => sum + entry.amount, 0);
+  const selectedUser = selectedReview?.user;
 
   return (
     <div className="admin-page">
@@ -212,9 +223,23 @@ export default function AdminPage() {
         }
         .queue-item {
           display: grid;
-          grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+          grid-template-columns: minmax(0, 1fr) auto;
           gap: 16px;
           align-items: center;
+        }
+        .queue-summary {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+          flex-wrap: wrap;
+        }
+        .queue-line {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          flex-wrap: wrap;
         }
         .queue-meta strong,
         .history-item strong,
@@ -234,6 +259,41 @@ export default function AdminPage() {
         .queue-side {
           display: grid;
           gap: 6px;
+        }
+        .queue-name {
+          font-size: 16px;
+          font-weight: 800;
+          color: #edf2fb;
+        }
+        .queue-chip {
+          display: inline-flex;
+          align-items: center;
+          min-height: 28px;
+          padding: 0 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.05);
+          color: #c9d4e4;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .08em;
+        }
+        .queue-chip.deposit {
+          background: rgba(14,203,129,0.14);
+          color: #0ecb81;
+        }
+        .queue-chip.withdraw,
+        .queue-chip.kyc {
+          background: rgba(247,147,26,0.14);
+          color: #f6b353;
+        }
+        .queue-muted {
+          color: #8fa2ba;
+          font-size: 13px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 100%;
         }
         .queue-side span {
           color: #8fa2ba;
@@ -260,6 +320,11 @@ export default function AdminPage() {
           align-items: center;
           gap: 8px;
           font-weight: 800;
+          cursor: pointer;
+        }
+        .detail-btn {
+          background: rgba(52,120,246,0.14);
+          color: #7fb0ff;
         }
         .approve-btn {
           background: rgba(14, 203, 129, 0.16);
@@ -321,6 +386,45 @@ export default function AdminPage() {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 22px;
         }
+        .detail-card {
+          padding: 24px;
+        }
+        .detail-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+        .detail-block {
+          border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.05);
+          background: rgba(255,255,255,0.03);
+          padding: 18px;
+        }
+        .detail-block h3 {
+          font-size: 16px;
+          font-weight: 800;
+          margin-bottom: 12px;
+        }
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 8px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .detail-row:last-child {
+          border-bottom: none;
+        }
+        .detail-label {
+          color: #8fa2ba;
+          font-size: 13px;
+        }
+        .detail-value {
+          color: #eef3fb;
+          font-size: 13px;
+          text-align: right;
+          word-break: break-word;
+        }
         .empty-state {
           border-radius: 20px;
           border: 1px dashed rgba(255,255,255,0.1);
@@ -380,6 +484,7 @@ export default function AdminPage() {
         @media (max-width: 1180px) {
           .stats-grid,
           .history-grid,
+          .detail-grid,
           .two-col,
           .queue-item,
           .user-item {
@@ -387,6 +492,18 @@ export default function AdminPage() {
           }
           .queue-actions {
             justify-content: flex-start;
+          }
+        }
+        @media (max-width: 760px) {
+          .queue-line,
+          .queue-summary {
+            align-items: flex-start;
+          }
+          .detail-row {
+            flex-direction: column;
+          }
+          .detail-value {
+            text-align: left;
           }
         }
       `}</style>
@@ -510,21 +627,30 @@ export default function AdminPage() {
           <div className="queue-list">
             {pendingWalletRequests.map((entry) => (
               <article key={entry.id} className="queue-item">
-                <div className="queue-meta">
-                  <strong>{entry.userName}</strong>
-                  <small>{entry.userEmail}</small>
-                  <small>{entry.type === 'withdraw' ? `Withdraw to ${entry.withdrawAddress || 'No wallet address'}` : `Deposit wallet ${entry.walletAddress || 'Not supplied'}`}</small>
-                  <small>Submitted {formatTimestamp(entry.timestamp)}</small>
-                </div>
-                <div className="queue-side">
-                  <span>{entry.type}</span>
-                  <strong>${formatNumber(entry.amount)}</strong>
-                  <small>{entry.btcAmount ? `${entry.btcAmount.toFixed(8)} BTC` : 'USD request only'}</small>
+                <div className="queue-summary">
+                  <div className="queue-line">
+                    <span className="queue-name">{entry.userName}</span>
+                    <span className={`queue-chip ${entry.type}`}>{entry.type}</span>
+                    <span className="queue-muted">{entry.userEmail}</span>
+                    <span className="queue-muted">${formatNumber(entry.amount)}</span>
+                    <span className="queue-muted">{entry.btcAmount ? `${entry.btcAmount.toFixed(8)} BTC` : 'USD request only'}</span>
+                    <span className="queue-muted">Submitted {formatTimestamp(entry.timestamp)}</span>
+                  </div>
                 </div>
                 <div className="queue-actions">
+                  <button
+                    className="action-btn detail-btn"
+                    onClick={() => setSelectedReview({
+                      kind: 'wallet',
+                      request: entry,
+                      user: users.find((userEntry) => userEntry.email.toLowerCase() === entry.userEmail.toLowerCase()),
+                    })}
+                  >
+                    <span>View details</span>
+                  </button>
                   <button className="action-btn approve-btn" onClick={() => approveTransaction(entry.id)}>
                     <CheckCircle2 size={16} />
-                    <span>Approve</span>
+                    <span>Verify</span>
                   </button>
                   <button className="action-btn reject-btn" onClick={() => rejectTransaction(entry.id)}>
                     <XCircle size={16} />
@@ -551,25 +677,30 @@ export default function AdminPage() {
           <div className="queue-list">
             {pendingKycRequests.map((entry) => (
               <article key={entry.id} className="queue-item">
-                <div className="queue-meta">
-                  <strong>{entry.fullName}</strong>
-                  <small>{entry.userEmail}</small>
-                  <small>{entry.phone} • {entry.country}, {entry.city} {entry.postCode}</small>
-                  <small>{entry.job} • {entry.documentType.replace('_', ' ')}</small>
-                  <div className="docs">
-                    <div className="doc-line">Front document: {entry.frontImage || 'Not uploaded'}</div>
-                    <div className="doc-line">Back document: {entry.backImage || 'Not uploaded'}</div>
+                <div className="queue-summary">
+                  <div className="queue-line">
+                    <span className="queue-name">{entry.userName || entry.fullName}</span>
+                    <span className="queue-chip kyc">KYC</span>
+                    <span className="queue-muted">{entry.userEmail}</span>
+                    <span className="queue-muted">{entry.country || 'No country'}</span>
+                    <span className="queue-muted">{formatDocumentType(entry.documentType)}</span>
+                    <span className="queue-muted">Submitted {formatTimestamp(entry.submittedAt)}</span>
                   </div>
                 </div>
-                <div className="queue-side">
-                  <span>KYC Request</span>
-                  <strong>Pending</strong>
-                  <small>Submitted {formatTimestamp(entry.submittedAt)}</small>
-                </div>
                 <div className="queue-actions">
+                  <button
+                    className="action-btn detail-btn"
+                    onClick={() => setSelectedReview({
+                      kind: 'kyc',
+                      request: entry,
+                      user: users.find((userEntry) => userEntry.email.toLowerCase() === entry.userEmail.toLowerCase()),
+                    })}
+                  >
+                    <span>View details</span>
+                  </button>
                   <button className="action-btn approve-btn" onClick={() => approveVerification(entry.userEmail)}>
                     <CheckCircle2 size={16} />
-                    <span>Approve</span>
+                    <span>Verify</span>
                   </button>
                   <button className="action-btn reject-btn" onClick={() => rejectVerification(entry.userEmail)}>
                     <XCircle size={16} />
@@ -581,6 +712,121 @@ export default function AdminPage() {
             {pendingKycRequests.length === 0 && <div className="empty-state">No KYC reviews are waiting right now.</div>}
           </div>
         </section>
+      </section>
+
+      <section className="admin-card detail-card">
+        <div className="section-head">
+          <div>
+            <h2>Request Details</h2>
+            <p>{selectedReview ? 'Selected user and request information.' : 'Choose View details from any request to inspect the full user submission.'}</p>
+          </div>
+          {selectedReview && (
+            <div className="section-tag">
+              <span>{selectedReview.kind === 'wallet' ? 'Wallet request' : 'KYC request'}</span>
+            </div>
+          )}
+        </div>
+
+        {selectedReview ? (
+          <div className="detail-grid">
+            <div className="detail-block">
+              <h3>User information</h3>
+              <div className="detail-row">
+                <span className="detail-label">Name</span>
+                <span className="detail-value">{selectedUser?.name || (selectedReview.kind === 'kyc' ? selectedReview.request.fullName : selectedReview.request.userName) || 'Not available'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Email</span>
+                <span className="detail-value">{selectedUser?.email || selectedReview.request.userEmail}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Phone</span>
+                <span className="detail-value">{selectedUser?.phone || (selectedReview.kind === 'kyc' ? selectedReview.request.phone : 'Not provided')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Country</span>
+                <span className="detail-value">{selectedUser?.country || (selectedReview.kind === 'kyc' ? selectedReview.request.country : 'Not provided')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">City</span>
+                <span className="detail-value">{selectedUser?.city || (selectedReview.kind === 'kyc' ? selectedReview.request.city : 'Not provided')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Post code</span>
+                <span className="detail-value">{selectedUser?.postCode || (selectedReview.kind === 'kyc' ? selectedReview.request.postCode : 'Not provided')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Job</span>
+                <span className="detail-value">{selectedUser?.job || (selectedReview.kind === 'kyc' ? selectedReview.request.job : 'Not provided')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Timezone</span>
+                <span className="detail-value">{selectedUser?.timezone || 'Not provided'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Telegram</span>
+                <span className="detail-value">{selectedUser?.telegram || 'Not provided'}</span>
+              </div>
+            </div>
+
+            <div className="detail-block">
+              <h3>{selectedReview.kind === 'wallet' ? 'Request information' : 'Verification submission'}</h3>
+              {selectedReview.kind === 'wallet' ? (
+                <>
+                  <div className="detail-row">
+                    <span className="detail-label">Request type</span>
+                    <span className="detail-value">{selectedReview.request.type}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">USD amount</span>
+                    <span className="detail-value">${formatNumber(selectedReview.request.amount)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">BTC amount</span>
+                    <span className="detail-value">{selectedReview.request.btcAmount ? selectedReview.request.btcAmount.toFixed(8) : 'Not stored'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Deposit wallet</span>
+                    <span className="detail-value">{selectedReview.request.walletAddress || 'Not supplied'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Withdraw address</span>
+                    <span className="detail-value">{selectedReview.request.withdrawAddress || 'Not supplied'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Submitted</span>
+                    <span className="detail-value">{formatTimestamp(selectedReview.request.timestamp)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="detail-row">
+                    <span className="detail-label">Full name</span>
+                    <span className="detail-value">{selectedReview.request.fullName}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Document type</span>
+                    <span className="detail-value">{formatDocumentType(selectedReview.request.documentType)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Front document</span>
+                    <span className="detail-value">{selectedReview.request.frontImage || 'Not uploaded'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Back document</span>
+                    <span className="detail-value">{selectedReview.request.backImage || 'Not uploaded'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Submitted</span>
+                    <span className="detail-value">{formatTimestamp(selectedReview.request.submittedAt)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">No request selected yet.</div>
+        )}
       </section>
 
       <section className="admin-card section-card">

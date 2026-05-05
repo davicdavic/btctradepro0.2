@@ -1,3 +1,19 @@
+export type AiPlanTier = 'normal' | 'pro' | 'promex';
+
+export interface AiTradingSubscription {
+  tier: AiPlanTier;
+  displayName: string;
+  price: number;
+  tradeWindowHours: number;
+  autoAmount: number;
+  purchasedAt: string;
+  expiresAt: string;
+  lastTradeAt?: string;
+  totalTrades: number;
+  totalProfit: number;
+  active: boolean;
+}
+
 // User types
 export interface User {
   id: string;
@@ -20,6 +36,7 @@ export interface User {
   job?: string;
   timezone?: string;
   telegram?: string;
+  aiTrading?: AiTradingSubscription;
   kyc?: {
     fullName: string;
     phone: string;
@@ -86,6 +103,8 @@ export interface Trade {
   pnl?: number;
   priceMovePct?: number;
   outcomeReason?: 'expiry' | 'liquidation';
+  source?: 'manual' | 'ai';
+  aiPlanTier?: AiPlanTier;
 }
 
 export interface ActiveTrade {
