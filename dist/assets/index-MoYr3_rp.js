@@ -507,9 +507,11 @@ Error generating stack: `+s.message+`
           z-index: 100;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          padding: 16px 18px;
-          background: rgba(15, 18, 26, 0.96);
+          gap: 10px;
+          padding: 14px 18px 12px;
+          background:
+            radial-gradient(circle at top right, rgba(52, 120, 246, 0.08), transparent 28%),
+            rgba(15, 18, 26, 0.96);
           border-bottom: 1px solid rgba(255, 255, 255, 0.06);
           backdrop-filter: blur(16px);
         }
@@ -528,11 +530,16 @@ Error generating stack: `+s.message+`
         }
         .header-main {
           justify-content: space-between;
-          gap: 16px;
+          gap: 14px;
+          align-items: stretch;
         }
         .header-brand {
           gap: 14px;
           min-width: 0;
+          padding: 12px 14px;
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
         .brand-icon {
           width: 40px;
@@ -557,15 +564,16 @@ Error generating stack: `+s.message+`
           display: none;
         }
         .header-ticker {
-          gap: 8px;
+          gap: 10px;
           min-width: 0;
-          padding: 0;
-          border-radius: 0;
-          background: transparent;
-          border: none;
-          flex-direction: row;
-          align-items: center;
-          white-space: nowrap;
+          padding: 12px 14px;
+          border-radius: 20px;
+          background: linear-gradient(180deg, rgba(19, 27, 40, 0.96), rgba(13, 18, 28, 0.92));
+          border: 1px solid rgba(79, 119, 182, 0.28);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+          flex: 1;
+          align-items: stretch;
+          white-space: normal;
         }
         .ticker-top {
           display: flex;
@@ -586,19 +594,20 @@ Error generating stack: `+s.message+`
         .ticker-market-copy {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 6px;
           min-width: 0;
+          width: 100%;
         }
         .ticker-cash-card {
-          margin-top: 8px;
+          margin-top: 2px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          padding: 10px 12px;
+          padding: 12px 12px 11px;
           border-radius: 16px;
           background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .ticker-cash-copy {
           min-width: 0;
@@ -615,14 +624,16 @@ Error generating stack: `+s.message+`
         }
         .ticker-symbol {
           color: #f5f7fb;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
           white-space: nowrap;
         }
         .ticker-price {
           color: #f5f7fb;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 22px;
+          font-weight: 800;
           font-family: 'JetBrains Mono', monospace;
           white-space: nowrap;
         }
@@ -641,17 +652,11 @@ Error generating stack: `+s.message+`
           background: rgba(246, 70, 93, 0.15);
         }
         .header-right {
-          gap: 12px;
-        }
-        .balance-badge {
           display: flex;
           align-items: center;
-          gap: 14px;
-          padding: 10px 14px;
-          background: rgba(255, 255, 255, 0.04);
-          border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          gap: 12px;
         }
+        .balance-badge { display: none; }
         .balance-label {
           display: block;
           font-size: 10px;
@@ -708,6 +713,7 @@ Error generating stack: `+s.message+`
           gap: 8px;
           padding: 8px 12px;
           cursor: pointer;
+          min-height: 42px;
         }
         .user-avatar {
           width: 28px;
@@ -839,15 +845,16 @@ Error generating stack: `+s.message+`
           width: 100%;
           display: grid;
           grid-template-columns: auto;
-          gap: 12px;
+          gap: 8px;
+          justify-content: end;
         }
         .summary-card {
           justify-content: space-between;
           gap: 12px;
           min-width: 0;
-          padding: 12px 14px;
+          padding: 10px 12px;
           border-radius: 16px;
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.035);
           border: 1px solid rgba(255, 255, 255, 0.06);
         }
         .summary-label {
@@ -885,17 +892,15 @@ Error generating stack: `+s.message+`
           letter-spacing: 0.6px;
         }
         @media (max-width: 1023px) {
-          .balance-badge {
-            display: none;
-          }
           .header-summary {
             grid-template-columns: 1fr;
+            justify-content: stretch;
           }
         }
         @media (max-width: 720px) {
           .pro-header {
-            padding: 8px 10px;
-            gap: 6px;
+            padding: 8px 10px 10px;
+            gap: 8px;
           }
           .brand-copy p,
           .user-name {
@@ -905,8 +910,8 @@ Error generating stack: `+s.message+`
             font-size: 13px;
           }
           .header-ticker {
-            padding: 6px 8px;
-            gap: 4px;
+            padding: 10px;
+            gap: 8px;
             border-radius: 12px;
             background: linear-gradient(180deg, rgba(17, 25, 37, 0.96), rgba(13, 19, 29, 0.86));
             border-color: rgba(72, 113, 173, 0.35);
@@ -927,11 +932,11 @@ Error generating stack: `+s.message+`
             width: 100%;
           }
           .ticker-price {
-            font-size: 13px;
+            font-size: 18px;
             line-height: 1;
           }
           .ticker-change {
-            font-size: 9px;
+            font-size: 10px;
             padding: 3px 7px;
             flex-shrink: 0;
           }
@@ -946,7 +951,7 @@ Error generating stack: `+s.message+`
             flex-shrink: 0;
           }
           .summary-card {
-            padding: 7px 9px;
+            padding: 8px 10px;
             border-radius: 12px;
             gap: 8px;
           }
@@ -968,24 +973,16 @@ Error generating stack: `+s.message+`
             flex-wrap: wrap;
             gap: 10px;
           }
+          .header-brand,
+          .header-ticker {
+            width: 100%;
+          }
           .header-summary {
             grid-template-columns: 1fr;
             gap: 6px;
           }
           .profile-chip {
             gap: 8px;
-          }
-          .summary-user-card {
-            display: none;
-          }
-          .summary-user-card .summary-label {
-            display: none;
-          }
-          .summary-user-card .profile-chip {
-            display: none;
-          }
-          .summary-user-card .status-chip {
-            display: none;
           }
           .notification-dropdown {
             width: min(88vw, 320px);
