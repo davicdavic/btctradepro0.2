@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, IChartApi, IPriceLine, ISeriesApi, CandlestickData, HistogramData, SeriesMarker, Time } from 'lightweight-charts';
 import { Activity, BarChart2, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAuth, useApp } from '../App';
-import type { AiPlanTier } from '../types';
-import { AI_PLAN_CATALOG, buildAiSubscription, getAiPlanConfig } from '../utils/aiTrading';
+import type { AiPlanDurationKey, AiPlanTier } from '../types';
+import { AI_PLAN_CATALOG, AI_PLAN_DURATIONS, buildAiSubscription, calculateAiPlanTotal, canStartAiSession, getAiDurationConfig, getAiPlanConfig, isAiSubscriptionActive } from '../utils/aiTrading';
 import { formatNumber } from '../utils/mockData';
 import { createFallbackCandles, fetchBtcCandles, getIntervalSeconds, type MarketCandle, type MarketInterval } from '../utils/marketApi';
 import { calculateLiquidationPrice, calculatePnL } from '../utils/tradeEngine';
@@ -61,6 +61,18 @@ function formatAiTimeRemaining(expiresAt?: string) {
   return `${hours}h left`;
 }
 
+function formatAiPlanRemaining(expiresAt?: string) {
+  if (!expiresAt) return 'No active plan';
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return 'Expired';
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+  if (days >= 30) {
+    const months = Math.floor(days / 30);
+    return `${months} month${months > 1 ? 's' : ''} left`;
+  }
+  return `${days} day${days > 1 ? 's' : ''} left`;
+}
+
 const PREVIEW_MOVE_PCT = 0.3;
 
 export default function TradePage() {
@@ -80,6 +92,7 @@ export default function TradePage() {
   const [tradeMode, setTradeMode] = useState<'normal' | 'ai'>('normal');
   const [showAiModal, setShowAiModal] = useState(false);
   const [selectedAiPlan, setSelectedAiPlan] = useState<AiPlanTier>('normal');
+  const [selectedAiDuration, setSelectedAiDuration] = useState<AiPlanDurationKey>('1m');
   const [aiTradeAmount, setAiTradeAmount] = useState('100');
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [candles, setCandles] = useState<MarketCandle[]>([]);
@@ -97,8 +110,13 @@ export default function TradePage() {
   const canTrade = user?.verificationStatus === 'approved';
   const aiSubscription = user?.aiTrading;
   const aiPlanConfig = getAiPlanConfig(selectedAiPlan);
+  const aiDurationConfig = getAiDurationConfig(selectedAiDuration);
   const aiTradeAmountValue = parseFloat(aiTradeAmount || '0');
   const lockedAiAmount = aiSubscription?.active ? aiSubscription.lockedAmount || 0 : 0;
+  const hasPaidAiPlan = isAiSubscriptionActive(aiSubscription);
+  const canLaunchNextAiSession = canStartAiSession(aiSubscription);
+  const aiPlanTotal = calculateAiPlanTotal(aiPlanConfig.price, aiDurationConfig.months, aiDurationConfig.discountPct);
+  const freeAiDays = user?.freeAiDays || 0;
   const availableUsdBalance = Math.max(0, (user?.usdBalance || 0) - lockedAiAmount);
   const tradeCountdown = activeTrade ? Math.max(0, Math.ceil((new Date(activeTrade.endTime).getTime() - nowMs) / 1000)) : 0;
   const activeUnrealized = activeTrade
@@ -128,14 +146,15 @@ export default function TradePage() {
     return [
       `AI CORE STATUS :: ${activeLabel}`,
       `PLAN PROFILE  :: ${planLabel}`,
+      `PLAN PERIOD   :: ${aiSubscription ? formatAiPlanRemaining(aiSubscription.subscriptionEndsAt) : 'NO SUBSCRIPTION'}`,
       `BTC PRICE FEED:: ${latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       `LOCKED CAPITAL:: $${formatNumber(lockedAiAmount)}`,
-      `SESSION PROFIT:: $${formatNumber(aiSubscription?.currentProfit || 0)}`,
+      `SESSION PROFIT:: $${formatNumber(aiSubscription?.active ? aiSubscription.currentProfit || 0 : 0)}`,
       `AVAILABLE USD :: $${formatNumber(availableUsdBalance)}`,
-      `NEXT ACTION   :: ${aiSubscription?.active ? 'TRACKING BTC MICRO MOVES' : 'WAITING FOR AI SESSION'}`,
-      `TRADE WINDOW  :: ${aiSubscription?.active ? formatAiTimeRemaining(aiSubscription.expiresAt) : 'NOT STARTED'}`,
+      `NEXT ACTION   :: ${aiSubscription?.active ? 'TRACKING BTC MICRO MOVES' : canLaunchNextAiSession ? 'READY FOR TODAY SESSION' : 'WAITING FOR NEXT DAY'}`,
+      `TRADE WINDOW  :: ${aiSubscription?.active ? formatAiTimeRemaining(aiSubscription.expiresAt) : hasPaidAiPlan ? 'SESSION CLOSED FOR TODAY' : 'NOT STARTED'}`,
     ];
-  }, [aiSubscription, availableUsdBalance, latestPrice, lockedAiAmount]);
+  }, [aiSubscription, availableUsdBalance, canLaunchNextAiSession, hasPaidAiPlan, latestPrice, lockedAiAmount]);
   const tradeMarkers = useMemo<SeriesMarker<Time>[]>(() => {
     const historyMarkers = manualTrades.flatMap((trade) => {
       const markers: SeriesMarker<Time>[] = [];
@@ -500,22 +519,99 @@ export default function TradePage() {
       alert('Enter a valid AI trade amount.');
       return;
     }
-    if ((user.usdBalance || 0) < aiPlanConfig.price + aiTradeAmountValue) {
+    if ((user.usdBalance || 0) < aiPlanTotal + aiTradeAmountValue) {
       alert('Your USD balance is too low for this AI plan.');
       return;
     }
-    if (user.aiTrading?.active) {
-      alert('Stop the current AI trade before starting a new one.');
+    if (hasPaidAiPlan) {
+      alert('Your current AI subscription is still active. Use today session or wait until the plan finishes.');
       return;
     }
 
-    const nextSubscription = buildAiSubscription(selectedAiPlan, aiTradeAmountValue);
+    const nextSubscription = buildAiSubscription(selectedAiPlan, aiTradeAmountValue, selectedAiDuration);
     updateUser({
-      usdBalance: Math.max(0, user.usdBalance - aiPlanConfig.price),
+      usdBalance: Math.max(0, user.usdBalance - aiPlanTotal),
       aiTrading: {
         ...nextSubscription,
         totalTrades: user.aiTrading?.totalTrades || 0,
         totalProfit: user.aiTrading?.totalProfit || 0,
+        totalSessionDays: (user.aiTrading?.totalSessionDays || 0) + 1,
+      },
+    });
+    setShowAiModal(false);
+    setTradeMode('ai');
+  };
+
+  const handleStartNextAiSession = () => {
+    if (!user || !aiSubscription) return;
+    if (!canTrade) {
+      alert('Verify your account in Profile before using AI trading.');
+      return;
+    }
+    if (!canLaunchNextAiSession) {
+      alert('Today AI session is already used. Please come back on the next day.');
+      return;
+    }
+    if ((user.usdBalance || 0) < aiSubscription.autoAmount) {
+      alert('Your USD balance is too low for this AI trade amount.');
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    updateUser({
+      aiTrading: {
+        ...aiSubscription,
+        active: true,
+        expiresAt: new Date(Date.now() + aiSubscription.tradeWindowHours * 60 * 60 * 1000).toISOString(),
+        lastSessionStartedAt: nowIso,
+        lastAccruedAt: nowIso,
+        lockedAmount: aiSubscription.autoAmount,
+        currentProfit: 0,
+        totalSessionDays: (aiSubscription.totalSessionDays || 0) + 1,
+      },
+    });
+    setTradeMode('ai');
+  };
+
+  const handleUseFreeAiDay = () => {
+    if (!user) return;
+    if (!canTrade) {
+      alert('Verify your account in Profile before using AI trading.');
+      return;
+    }
+    if (freeAiDays <= 0) {
+      alert('No free AI day is available on this account.');
+      return;
+    }
+    if (!aiTradeAmount || aiTradeAmountValue <= 0) {
+      alert('Enter a valid AI trade amount.');
+      return;
+    }
+    if ((user.usdBalance || 0) < aiTradeAmountValue) {
+      alert('Your USD balance is too low for this AI trade amount.');
+      return;
+    }
+    if (hasPaidAiPlan || aiSubscription?.active) {
+      alert('Finish the current AI plan before using a free AI day.');
+      return;
+    }
+
+    const nextSubscription = buildAiSubscription(selectedAiPlan, aiTradeAmountValue, '1m', {
+      priceOverride: 0,
+      freeAccess: true,
+      subscriptionHoursOverride: 24,
+    });
+
+    updateUser({
+      freeAiDays: Math.max(0, freeAiDays - 1),
+      aiTrading: {
+        ...nextSubscription,
+        termLabel: '1 Free Day',
+        termMonths: 0,
+        discountPct: 100,
+        totalTrades: user.aiTrading?.totalTrades || 0,
+        totalProfit: user.aiTrading?.totalProfit || 0,
+        totalSessionDays: (user.aiTrading?.totalSessionDays || 0) + 1,
       },
     });
     setShowAiModal(false);
@@ -550,7 +646,9 @@ export default function TradePage() {
       aiTrading: {
         ...user.aiTrading,
         active: false,
+        expiresAt: new Date().toISOString(),
         lockedAmount: 0,
+        currentProfit: 0,
         lastTradeAt: new Date().toISOString(),
         totalTrades: (user.aiTrading.totalTrades || 0) + 1,
         totalProfit: (user.aiTrading.totalProfit || 0) + (user.aiTrading.currentProfit || 0),
@@ -601,6 +699,19 @@ export default function TradePage() {
               ))}
             </div>
 
+            <div className="ai-duration-grid">
+              {AI_PLAN_DURATIONS.map((duration) => (
+                <button
+                  key={duration.key}
+                  className={`ai-duration-card ${selectedAiDuration === duration.key ? 'active' : ''}`}
+                  onClick={() => setSelectedAiDuration(duration.key)}
+                >
+                  <strong>{duration.label}</strong>
+                  <span>{duration.discountPct > 0 ? `${duration.discountPct}% off total plan price` : 'Full monthly price'}</span>
+                </button>
+              ))}
+            </div>
+
             <div className="ai-modal-body">
               <div className="trade-box">
                 <div className="trade-label">Auto trade amount</div>
@@ -613,17 +724,17 @@ export default function TradePage() {
                   placeholder="100"
                 />
                 <div className="ai-helper-copy">
-                  This amount is locked during the AI session. Profit grows slowly at `0.0001` per second for every `1000` in AI trade size.
+                  This amount is locked during each AI session only. Profit grows slowly at `0.0001` per second for every `1000` in AI trade size.
                 </div>
               </div>
 
               <div className="trade-box">
                 <div className="trade-label">What AI trading does</div>
                 <div className="ai-feature-list">
-                  <div className="ai-feature-row">Locks your selected AI amount so it cannot be used by manual trades while the session is running.</div>
-                  <div className="ai-feature-row">Increases your balance slowly by the AI formula instead of jumping too high too fast.</div>
-                  <div className="ai-feature-row">Writes the finished AI session into trade history when the timer ends or when you stop it.</div>
-                  <div className="ai-feature-row">Lets you check a dedicated AI terminal view on phone and desktop instead of showing AI on the candlestick graph.</div>
+                  <div className="ai-feature-row">Paid plans stay active for the full subscription term, and you can run one AI session each day until the plan period ends.</div>
+                  <div className="ai-feature-row">Normal runs 4 hours per day, Pro runs 12 hours per day, and Pro Mex runs 24 hours per day.</div>
+                  <div className="ai-feature-row">Locks your selected AI amount while the session is running, then releases it when the session ends or you stop it.</div>
+                  <div className="ai-feature-row">Writes every finished AI session into trade history and grows balance slowly instead of spiking too high.</div>
                 </div>
               </div>
             </div>
@@ -631,11 +742,21 @@ export default function TradePage() {
             <div className="ai-summary-bar">
               <div>
                 <strong>{aiPlanConfig.name}</strong>
-                <span>${formatNumber(aiPlanConfig.price)} monthly fee • {aiPlanConfig.tradeWindowHours}h window</span>
+                <span>
+                  ${formatNumber(aiPlanTotal)} total • {aiDurationConfig.label} • {aiPlanConfig.tradeWindowHours}h each day
+                  {aiDurationConfig.discountPct > 0 ? ` • ${aiDurationConfig.discountPct}% off` : ''}
+                </span>
               </div>
-              <button className="ai-buy-btn" onClick={handlePurchaseAiPlan}>
-                Buy AI Version
-              </button>
+              <div className="ai-head-actions">
+                {freeAiDays > 0 && (
+                  <button className="ai-open-btn secondary" onClick={handleUseFreeAiDay}>
+                    Use Free AI Day ({freeAiDays})
+                  </button>
+                )}
+                <button className="ai-buy-btn" onClick={handlePurchaseAiPlan}>
+                  Buy AI Version
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1420,6 +1541,11 @@ export default function TradePage() {
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 14px;
         }
+        .ai-duration-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+        }
         .ai-plan-card {
           text-align: left;
           border-radius: 22px;
@@ -1459,6 +1585,32 @@ export default function TradePage() {
           color: #8fa2ba;
           font-size: 13px;
           line-height: 1.6;
+        }
+        .ai-duration-card {
+          text-align: left;
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.03);
+          padding: 14px;
+          cursor: pointer;
+        }
+        .ai-duration-card.active {
+          border-color: rgba(247,147,26,0.34);
+          background: rgba(247,147,26,0.08);
+          box-shadow: inset 0 0 0 1px rgba(247,147,26,0.16);
+        }
+        .ai-duration-card strong {
+          display: block;
+          color: #eef3fb;
+          font-size: 15px;
+          font-weight: 800;
+        }
+        .ai-duration-card span {
+          display: block;
+          margin-top: 6px;
+          color: #8fa2ba;
+          font-size: 12px;
+          line-height: 1.5;
         }
         .ai-modal-body {
           display: grid;
@@ -1657,6 +1809,7 @@ export default function TradePage() {
           }
           .ticket-pill-row,
           .ai-plan-grid,
+          .ai-duration-grid,
           .ai-modal-body,
           .ai-metrics {
             grid-template-columns: 1fr;
@@ -1850,7 +2003,7 @@ export default function TradePage() {
             className={`ticket-pill ${tradeMode === 'ai' ? 'ai' : ''}`}
             onClick={() => {
               setTradeMode('ai');
-              if (!aiSubscription?.active) {
+              if (!hasPaidAiPlan && !aiSubscription?.active) {
                 setShowAiModal(true);
               }
             }}
@@ -1965,14 +2118,16 @@ export default function TradePage() {
             </div>
             <div className="ai-status-head">
               <div>
-                <strong>{aiSubscription?.active ? `${aiSubscription.displayName} AI is active` : 'Upgrade to AI Trade'}</strong>
+                <strong>{aiSubscription?.active ? `${aiSubscription.displayName} AI is active` : hasPaidAiPlan ? `${aiSubscription?.displayName} AI plan is ready` : 'Upgrade to AI Trade'}</strong>
                 <span>
                   {aiSubscription?.active
                     ? `Auto-trading BTC with ${formatAiTimeRemaining(aiSubscription.expiresAt)}`
-                    : 'Choose a plan and let the system place BTC trades automatically for this account.'}
+                    : hasPaidAiPlan
+                      ? `Plan active for ${formatAiPlanRemaining(aiSubscription?.subscriptionEndsAt)}. ${canLaunchNextAiSession ? 'Today session is ready to start.' : 'Today session was already used.'}`
+                      : 'Choose a plan and let the system place BTC trades automatically for this account.'}
                 </span>
               </div>
-              <div className="ai-badge">{aiSubscription?.active ? aiSubscription.displayName : 'Inactive'}</div>
+              <div className="ai-badge">{aiSubscription?.active ? aiSubscription.displayName : hasPaidAiPlan ? aiSubscription?.termLabel || 'Subscribed' : 'Inactive'}</div>
             </div>
 
             <div className="ai-helper-copy">
@@ -1982,11 +2137,11 @@ export default function TradePage() {
             <div className="ai-metrics">
               <div className="ai-metric">
                 <div className="ai-metric-label">Current plan</div>
-                <div className="ai-metric-value">{aiSubscription?.displayName || 'None'}</div>
+                <div className="ai-metric-value">{hasPaidAiPlan ? `${aiSubscription?.displayName} / ${aiSubscription?.termLabel}` : 'None'}</div>
               </div>
               <div className="ai-metric">
                 <div className="ai-metric-label">AI trading amount</div>
-                <div className="ai-metric-value">${formatNumber(aiSubscription?.lockedAmount || 0)}</div>
+                <div className="ai-metric-value">${formatNumber(aiSubscription?.active ? aiSubscription.lockedAmount || 0 : aiSubscription?.autoAmount || 0)}</div>
               </div>
               <div className="ai-metric">
                 <div className="ai-metric-label">AI history</div>
@@ -1994,8 +2149,8 @@ export default function TradePage() {
               </div>
               <div className="ai-metric">
                 <div className="ai-metric-label">Current session</div>
-                <div className="ai-metric-value" style={{ color: (aiSubscription?.currentProfit || 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
-                  {(aiSubscription?.currentProfit || 0) >= 0 ? '+' : '-'}${formatNumber(Math.abs(aiSubscription?.currentProfit || 0))}
+                <div className="ai-metric-value" style={{ color: (aiSubscription?.active ? aiSubscription.currentProfit || 0 : 0) >= 0 ? '#0ecb81' : '#f6465d' }}>
+                  {(aiSubscription?.active ? aiSubscription.currentProfit || 0 : 0) >= 0 ? '+' : '-'}${formatNumber(Math.abs(aiSubscription?.active ? aiSubscription.currentProfit || 0 : 0))}
                 </div>
               </div>
             </div>
@@ -2006,16 +2161,33 @@ export default function TradePage() {
                 <div className="info-row"><span>Normal</span><strong>$30 • 4 hours</strong></div>
                 <div className="info-row"><span>Pro</span><strong>$40 • 12 hours</strong></div>
                 <div className="info-row"><span>Pro Mex</span><strong>$65.55 • 24 hours</strong></div>
+                <div className="info-row"><span>Free AI days</span><strong>{freeAiDays}</strong></div>
+                {hasPaidAiPlan && (
+                  <>
+                    <div className="info-row"><span>Subscription</span><strong>{formatAiPlanRemaining(aiSubscription?.subscriptionEndsAt)}</strong></div>
+                    <div className="info-row"><span>Today Session</span><strong>{aiSubscription?.active ? 'Running' : canLaunchNextAiSession ? 'Ready' : 'Used'}</strong></div>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="ai-mode-actions">
               <button className="ai-open-btn" onClick={() => setShowAiModal(true)}>
-                {aiSubscription?.active ? 'Manage AI Plan' : 'Open AI Trading'}
+                {hasPaidAiPlan ? 'Manage AI Plan' : 'Open AI Trading'}
               </button>
               <button className="ai-open-btn secondary" onClick={() => setTradeMode('ai')}>
                 Check AI Trade
               </button>
+              {hasPaidAiPlan && !aiSubscription?.active && (
+                <button className="ai-open-btn secondary" onClick={handleStartNextAiSession}>
+                  Start Today AI Session
+                </button>
+              )}
+              {!hasPaidAiPlan && freeAiDays > 0 && (
+                <button className="ai-open-btn secondary" onClick={handleUseFreeAiDay}>
+                  Use Free AI Day
+                </button>
+              )}
               {aiSubscription?.active && (
                 <button className="ai-open-btn stop" onClick={handleStopAiTrade}>
                   Stop AI Trading

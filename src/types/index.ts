@@ -1,19 +1,29 @@
 export type AiPlanTier = 'normal' | 'pro' | 'promex';
+export type AiPlanDurationKey = '1m' | '3m' | '6m' | '1y';
 
 export interface AiTradingSubscription {
   tier: AiPlanTier;
   displayName: string;
+  monthlyPrice: number;
   price: number;
   tradeWindowHours: number;
+  termKey: AiPlanDurationKey;
+  termLabel: string;
+  termMonths: number;
+  discountPct: number;
   autoAmount: number;
   purchasedAt: string;
+  subscriptionEndsAt: string;
   expiresAt: string;
+  lastSessionStartedAt?: string;
   lastAccruedAt?: string;
   lastTradeAt?: string;
   lockedAmount: number;
   currentProfit: number;
   totalTrades: number;
   totalProfit: number;
+  totalSessionDays: number;
+  freeAccess?: boolean;
   active: boolean;
 }
 
@@ -40,6 +50,10 @@ export interface User {
   timezone?: string;
   telegram?: string;
   aiTrading?: AiTradingSubscription;
+  inviteCode?: string;
+  usedInviteCode?: string;
+  successfulInvites?: number;
+  freeAiDays?: number;
   kyc?: {
     fullName: string;
     phone: string;

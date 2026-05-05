@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ActiveTrade, KycRequest, TradeResolution, User, Transaction, Trade, WalletRequest } from './types';
+import { ActiveTrade, AiPlanDurationKey, KycRequest, TradeResolution, User, Transaction, Trade, WalletRequest } from './types';
 import { DEFAULT_BTC_AVATAR, DEPOSIT_WALLET, mockUser } from './utils/mockData';
 import { getAiPlanConfig, getAiProfitPerSecond } from './utils/aiTrading';
 import { createFallbackSnapshot, fetchBtcSnapshot, subscribeBtcTicker } from './utils/marketApi';
@@ -34,7 +34,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (username: string, password: string) => void;
-  register: (username: string, email: string, password: string) => void;
+  register: (username: string, email: string, password: string, inviteCode?: string) => void;
   signInWithGoogle: (profile: { email: string; name: string; avatar?: string }) => void;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
@@ -141,6 +141,12 @@ function getDefaultTimezone() {
   return window.Intl?.DateTimeFormat?.().resolvedOptions().timeZone || 'UTC';
 }
 
+function makeInviteCode(name: string, id: string) {
+  const prefix = name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'BTC';
+  const suffix = id.replace(/[^0-9]/g, '').slice(-4) || `${Date.now()}`.slice(-4);
+  return `${prefix}${suffix}`;
+}
+
 function normalizeAiTrading(input: User['aiTrading']): User['aiTrading'] {
   if (!input) return undefined;
   const config = getAiPlanConfig(input.tier);
@@ -149,17 +155,26 @@ function normalizeAiTrading(input: User['aiTrading']): User['aiTrading'] {
     ...input,
     tier: config.tier,
     displayName: asString(input.displayName, config.name),
+    monthlyPrice: asNumber(input.monthlyPrice, config.price),
     price: asNumber(input.price, config.price),
     tradeWindowHours: asNumber(input.tradeWindowHours, config.tradeWindowHours),
+    termKey: (input.termKey || '1m') as AiPlanDurationKey,
+    termLabel: asString(input.termLabel, '1 Month'),
+    termMonths: asNumber(input.termMonths, 1),
+    discountPct: asNumber(input.discountPct),
     autoAmount: asNumber(input.autoAmount),
     purchasedAt: asString(input.purchasedAt, new Date().toISOString()),
+    subscriptionEndsAt: asString(input.subscriptionEndsAt, input.expiresAt || new Date().toISOString()),
     expiresAt: asString(input.expiresAt, new Date(Date.now() + config.tradeWindowHours * 60 * 60 * 1000).toISOString()),
+    lastSessionStartedAt: input.lastSessionStartedAt ? asString(input.lastSessionStartedAt) : undefined,
     lastAccruedAt: input.lastAccruedAt ? asString(input.lastAccruedAt) : undefined,
     lastTradeAt: input.lastTradeAt ? asString(input.lastTradeAt) : undefined,
     lockedAmount: asNumber(input.lockedAmount, asNumber(input.autoAmount)),
     currentProfit: asNumber(input.currentProfit),
     totalTrades: asNumber(input.totalTrades),
     totalProfit: asNumber(input.totalProfit),
+    totalSessionDays: asNumber(input.totalSessionDays, input.lastSessionStartedAt ? 1 : 0),
+    freeAccess: Boolean(input.freeAccess),
     active: Boolean(input.active),
   };
 }
@@ -180,6 +195,10 @@ function normalizeUser(input: User): User {
     vipLevel: asNumber(input.vipLevel),
     joinedDate: asString(input.joinedDate, new Date().toISOString().slice(0, 10)),
     aiTrading: normalizeAiTrading(input.aiTrading),
+    inviteCode: input.inviteCode ? asString(input.inviteCode).toUpperCase() : undefined,
+    usedInviteCode: input.usedInviteCode ? asString(input.usedInviteCode).toUpperCase() : undefined,
+    successfulInvites: asNumber(input.successfulInvites),
+    freeAiDays: asNumber(input.freeAiDays),
     kyc: input.kyc
       ? {
           ...input.kyc,
@@ -680,9 +699,10 @@ function App() {
     alert('Incorrect username or password');
   };
 
-  const register = (username: string, email: string, password: string) => {
+  const register = (username: string, email: string, password: string, inviteCode?: string) => {
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim().toLowerCase();
+    const normalizedInviteCode = inviteCode?.trim().toUpperCase() || '';
     if (!trimmedUsername || !password.trim()) {
       alert('Username and password are required');
       return;
@@ -693,6 +713,15 @@ function App() {
     const duplicate = users.find((entry) => entry.email.toLowerCase() === resolvedEmail);
     if (duplicate) {
       alert('That email is already registered');
+      return;
+    }
+
+    const inviter = normalizedInviteCode
+      ? users.find((entry) => entry.inviteCode?.toUpperCase() === normalizedInviteCode && entry.verificationStatus === 'approved')
+      : undefined;
+
+    if (normalizedInviteCode && !inviter) {
+      alert('Invite code not found or not active yet');
       return;
     }
 
@@ -717,6 +746,9 @@ function App() {
       job: '',
       timezone: getDefaultTimezone(),
       telegram: '',
+      usedInviteCode: normalizedInviteCode || undefined,
+      successfulInvites: 0,
+      freeAiDays: 0,
       kyc: {
         fullName: trimmedUsername,
         phone: '',
@@ -730,6 +762,14 @@ function App() {
         status: 'unverified',
       },
     };
+
+    if (inviter) {
+      replaceUser(inviter.email, (entry) => ({
+        ...entry,
+        successfulInvites: (entry.successfulInvites || 0) + 1,
+        freeAiDays: (entry.freeAiDays || 0) + 1,
+      }));
+    }
 
     setUsers((prev) => [freshUser, ...prev]);
     setUser(freshUser);
@@ -777,6 +817,8 @@ function App() {
       job: '',
       timezone: getDefaultTimezone(),
       telegram: '',
+      successfulInvites: 0,
+      freeAiDays: 0,
       kyc: {
         fullName: trimmedName,
         phone: '',
@@ -982,7 +1024,9 @@ function App() {
           const finishedAi = updatedUser.aiTrading as NonNullable<User['aiTrading']>;
           updatedUser.aiTrading = {
             ...finishedAi,
+            expiresAt: finalAccruedAt,
             lockedAmount: 0,
+            currentProfit: 0,
             lastTradeAt: finalAccruedAt,
             totalTrades: finishedAi.totalTrades + 1,
             totalProfit: finishedAi.totalProfit + nextProfit,
@@ -1064,6 +1108,7 @@ function App() {
       job: entry.kyc?.job || entry.job,
       isVerified: true,
       verificationStatus: 'approved',
+      inviteCode: entry.inviteCode || makeInviteCode(entry.name, entry.id),
       kyc: entry.kyc
         ? {
             ...entry.kyc,

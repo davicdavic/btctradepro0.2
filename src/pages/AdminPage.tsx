@@ -71,6 +71,174 @@ export default function AdminPage() {
   const totalWalletVolume = pendingWalletRequests.reduce((sum, entry) => sum + entry.amount, 0);
   const selectedUser = selectedReview?.user;
 
+  if (selectedReview) {
+    return (
+      <div className="admin-page">
+        <style>{`
+          .admin-page {
+            display: grid;
+            gap: 22px;
+            color: #edf2fb;
+          }
+          .admin-card {
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+              radial-gradient(circle at top right, rgba(52, 120, 246, 0.12), transparent 24%),
+              linear-gradient(180deg, rgba(15, 19, 28, 0.96), rgba(11, 16, 24, 0.94));
+            box-shadow: 0 28px 90px rgba(0, 0, 0, 0.26);
+          }
+          .detail-shell {
+            padding: 24px;
+            display: grid;
+            gap: 22px;
+          }
+          .detail-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+          }
+          .back-btn {
+            min-height: 44px;
+            padding: 0 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.05);
+            color: #edf2fb;
+            font-weight: 800;
+          }
+          .detail-head h1 {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+          }
+          .detail-head p {
+            color: #8fa2ba;
+            margin-top: 8px;
+            line-height: 1.6;
+          }
+          .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+          }
+          .detail-block {
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+          }
+          .detail-block h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 12px;
+          }
+          .detail-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+          }
+          .detail-row:last-child {
+            border-bottom: none;
+          }
+          .detail-label {
+            color: #8fa2ba;
+            font-size: 13px;
+          }
+          .detail-value {
+            color: #eef3fb;
+            font-size: 13px;
+            text-align: right;
+            word-break: break-word;
+          }
+          .hero-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.05);
+            color: #d8e1ef;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+          }
+          @media (max-width: 900px) {
+            .detail-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+          @media (max-width: 760px) {
+            .detail-row {
+              flex-direction: column;
+            }
+            .detail-value {
+              text-align: left;
+            }
+          }
+        `}</style>
+
+        <section className="admin-card detail-shell">
+          <div className="detail-topbar">
+            <div className="detail-head">
+              <div className="hero-chip">{selectedReview.kind === 'wallet' ? 'Wallet request' : 'KYC request'}</div>
+              <h1>Review Details</h1>
+              <p>Full request view for admin review, including the user identity, submitted values, and request timing.</p>
+            </div>
+            <button className="back-btn" onClick={() => setSelectedReview(null)}>Back to Admin</button>
+          </div>
+
+          <div className="detail-grid">
+            <div className="detail-block">
+              <h2>User information</h2>
+              <div className="detail-row"><span className="detail-label">User name</span><span className="detail-value">{selectedUser?.name || (selectedReview.kind === 'kyc' ? selectedReview.request.fullName : selectedReview.request.userName) || 'Not available'}</span></div>
+              <div className="detail-row"><span className="detail-label">Email</span><span className="detail-value">{selectedUser?.email || selectedReview.request.userEmail}</span></div>
+              <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{selectedUser?.phone || (selectedReview.kind === 'kyc' ? selectedReview.request.phone : 'Not provided')}</span></div>
+              <div className="detail-row"><span className="detail-label">Country</span><span className="detail-value">{selectedUser?.country || (selectedReview.kind === 'kyc' ? selectedReview.request.country : 'Not provided')}</span></div>
+              <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{selectedUser?.city || (selectedReview.kind === 'kyc' ? selectedReview.request.city : 'Not provided')}</span></div>
+              <div className="detail-row"><span className="detail-label">Post code</span><span className="detail-value">{selectedUser?.postCode || (selectedReview.kind === 'kyc' ? selectedReview.request.postCode : 'Not provided')}</span></div>
+              <div className="detail-row"><span className="detail-label">Job</span><span className="detail-value">{selectedUser?.job || (selectedReview.kind === 'kyc' ? selectedReview.request.job : 'Not provided')}</span></div>
+              <div className="detail-row"><span className="detail-label">Joined</span><span className="detail-value">{selectedUser?.joinedDate || 'Not available'}</span></div>
+            </div>
+
+            <div className="detail-block">
+              <h2>{selectedReview.kind === 'wallet' ? 'Submitted request' : 'Submitted verification'}</h2>
+              {selectedReview.kind === 'wallet' ? (
+                <>
+                  <div className="detail-row"><span className="detail-label">Request type</span><span className="detail-value">{selectedReview.request.type}</span></div>
+                  <div className="detail-row"><span className="detail-label">Amount</span><span className="detail-value">${formatNumber(selectedReview.request.amount)}</span></div>
+                  <div className="detail-row"><span className="detail-label">BTC amount</span><span className="detail-value">{selectedReview.request.btcAmount ? `${selectedReview.request.btcAmount.toFixed(8)} BTC` : 'Not stored'}</span></div>
+                  <div className="detail-row"><span className="detail-label">Deposit wallet</span><span className="detail-value">{selectedReview.request.walletAddress || 'Not supplied'}</span></div>
+                  <div className="detail-row"><span className="detail-label">Withdraw wallet</span><span className="detail-value">{selectedReview.request.withdrawAddress || 'Not supplied'}</span></div>
+                  <div className="detail-row"><span className="detail-label">Submitted time</span><span className="detail-value">{formatTimestamp(selectedReview.request.timestamp)}</span></div>
+                  <div className="detail-row"><span className="detail-label">Status</span><span className="detail-value">{selectedReview.request.status}</span></div>
+                </>
+              ) : (
+                <>
+                  <div className="detail-row"><span className="detail-label">Full name</span><span className="detail-value">{selectedReview.request.fullName}</span></div>
+                  <div className="detail-row"><span className="detail-label">Phone</span><span className="detail-value">{selectedReview.request.phone}</span></div>
+                  <div className="detail-row"><span className="detail-label">Country</span><span className="detail-value">{selectedReview.request.country}</span></div>
+                  <div className="detail-row"><span className="detail-label">City</span><span className="detail-value">{selectedReview.request.city}</span></div>
+                  <div className="detail-row"><span className="detail-label">Post code</span><span className="detail-value">{selectedReview.request.postCode}</span></div>
+                  <div className="detail-row"><span className="detail-label">Job</span><span className="detail-value">{selectedReview.request.job}</span></div>
+                  <div className="detail-row"><span className="detail-label">Document type</span><span className="detail-value">{formatDocumentType(selectedReview.request.documentType)}</span></div>
+                  <div className="detail-row"><span className="detail-label">Front image</span><span className="detail-value">{selectedReview.request.frontImage || 'Not uploaded'}</span></div>
+                  <div className="detail-row"><span className="detail-label">Back image</span><span className="detail-value">{selectedReview.request.backImage || 'Not uploaded'}</span></div>
+                  <div className="detail-row"><span className="detail-label">Submitted time</span><span className="detail-value">{formatTimestamp(selectedReview.request.submittedAt)}</span></div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-page">
       <style>{`
@@ -712,121 +880,6 @@ export default function AdminPage() {
             {pendingKycRequests.length === 0 && <div className="empty-state">No KYC reviews are waiting right now.</div>}
           </div>
         </section>
-      </section>
-
-      <section className="admin-card detail-card">
-        <div className="section-head">
-          <div>
-            <h2>Request Details</h2>
-            <p>{selectedReview ? 'Selected user and request information.' : 'Choose View details from any request to inspect the full user submission.'}</p>
-          </div>
-          {selectedReview && (
-            <div className="section-tag">
-              <span>{selectedReview.kind === 'wallet' ? 'Wallet request' : 'KYC request'}</span>
-            </div>
-          )}
-        </div>
-
-        {selectedReview ? (
-          <div className="detail-grid">
-            <div className="detail-block">
-              <h3>User information</h3>
-              <div className="detail-row">
-                <span className="detail-label">Name</span>
-                <span className="detail-value">{selectedUser?.name || (selectedReview.kind === 'kyc' ? selectedReview.request.fullName : selectedReview.request.userName) || 'Not available'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Email</span>
-                <span className="detail-value">{selectedUser?.email || selectedReview.request.userEmail}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Phone</span>
-                <span className="detail-value">{selectedUser?.phone || (selectedReview.kind === 'kyc' ? selectedReview.request.phone : 'Not provided')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Country</span>
-                <span className="detail-value">{selectedUser?.country || (selectedReview.kind === 'kyc' ? selectedReview.request.country : 'Not provided')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">City</span>
-                <span className="detail-value">{selectedUser?.city || (selectedReview.kind === 'kyc' ? selectedReview.request.city : 'Not provided')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Post code</span>
-                <span className="detail-value">{selectedUser?.postCode || (selectedReview.kind === 'kyc' ? selectedReview.request.postCode : 'Not provided')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Job</span>
-                <span className="detail-value">{selectedUser?.job || (selectedReview.kind === 'kyc' ? selectedReview.request.job : 'Not provided')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Timezone</span>
-                <span className="detail-value">{selectedUser?.timezone || 'Not provided'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Telegram</span>
-                <span className="detail-value">{selectedUser?.telegram || 'Not provided'}</span>
-              </div>
-            </div>
-
-            <div className="detail-block">
-              <h3>{selectedReview.kind === 'wallet' ? 'Request information' : 'Verification submission'}</h3>
-              {selectedReview.kind === 'wallet' ? (
-                <>
-                  <div className="detail-row">
-                    <span className="detail-label">Request type</span>
-                    <span className="detail-value">{selectedReview.request.type}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">USD amount</span>
-                    <span className="detail-value">${formatNumber(selectedReview.request.amount)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">BTC amount</span>
-                    <span className="detail-value">{selectedReview.request.btcAmount ? selectedReview.request.btcAmount.toFixed(8) : 'Not stored'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Deposit wallet</span>
-                    <span className="detail-value">{selectedReview.request.walletAddress || 'Not supplied'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Withdraw address</span>
-                    <span className="detail-value">{selectedReview.request.withdrawAddress || 'Not supplied'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Submitted</span>
-                    <span className="detail-value">{formatTimestamp(selectedReview.request.timestamp)}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="detail-row">
-                    <span className="detail-label">Full name</span>
-                    <span className="detail-value">{selectedReview.request.fullName}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Document type</span>
-                    <span className="detail-value">{formatDocumentType(selectedReview.request.documentType)}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Front document</span>
-                    <span className="detail-value">{selectedReview.request.frontImage || 'Not uploaded'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Back document</span>
-                    <span className="detail-value">{selectedReview.request.backImage || 'Not uploaded'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Submitted</span>
-                    <span className="detail-value">{formatTimestamp(selectedReview.request.submittedAt)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="empty-state">No request selected yet.</div>
-        )}
       </section>
 
       <section className="admin-card section-card">

@@ -1,22 +1,20 @@
 import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Check, Copy, Lock, Wallet, X } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Bitcoin, Check, Copy, Wallet, X } from 'lucide-react';
 import { useAuth, useApp } from '../App';
 import type { Transaction } from '../types';
 import { DEPOSIT_WALLET, formatNumber } from '../utils/mockData';
 
 export default function FinancePage() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { btcPrice, transactions, addTransaction, walletAddress } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'stake'>('deposit');
+  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [stakeAmount, setStakeAmount] = useState('');
   const [depositSubmitted, setDepositSubmitted] = useState(false);
   const [withdrawSubmitted, setWithdrawSubmitted] = useState(false);
-  const [stakeSubmitted, setStakeSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   // Show deposit modal instead of inline panel
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -78,6 +76,10 @@ export default function FinancePage() {
   const submitWithdraw = () => {
     if (!user || !withdrawAmount) return;
     const amount = parseFloat(withdrawAmount);
+    if (!withdrawAddress.trim()) {
+      alert('Enter your BTC wallet address before withdrawing.');
+      return;
+    }
     if (amount > (user.usdBalance || 0)) {
       alert('Insufficient USD balance');
       return;
@@ -96,31 +98,6 @@ export default function FinancePage() {
     setWithdrawSubmitted(true);
     setWithdrawAmount('');
     setWithdrawAddress('');
-  };
-
-  const submitStake = () => {
-    if (!user || !stakeAmount) return;
-    const amount = parseFloat(stakeAmount);
-    if (amount > user.btcBalance) {
-      alert('Insufficient BTC balance');
-      return;
-    }
-    updateUser({
-      btcBalance: user.btcBalance - amount,
-      stakeAmount: (user.stakeAmount || 0) + amount,
-    });
-    addTransaction({
-      id: `tx-${Date.now()}`,
-      type: 'stake',
-      amount: amount * btcPrice,
-      btcAmount: amount,
-      userEmail: user.email,
-      userName: user.name,
-      status: 'completed',
-      timestamp: new Date().toISOString(),
-    });
-    setStakeSubmitted(true);
-    setStakeAmount('');
   };
 
   return (
@@ -455,7 +432,7 @@ export default function FinancePage() {
             letter-spacing: -0.03em; margin-bottom: 8px;
           }
           .page-head p { color: #90a0b6; }
-          .balance-grid { display: grid; gap: 18px; grid-template-columns: repeat(2, 1fr); }
+          .balance-grid { display: grid; gap: 18px; grid-template-columns: 1fr; }
           .balance-card { padding: 22px; }
           .balance-icon {
             width: 48px; height: 48px; border-radius: 16px;
@@ -553,12 +530,6 @@ export default function FinancePage() {
             <strong>${formatNumber(user?.usdBalance || 0)}</strong>
             <p>Available for trading and withdrawals.</p>
           </div>
-          <div className="card balance-card">
-            <div className="balance-icon"><Lock size={24} /></div>
-            <h3>Staked BTC</h3>
-            <strong>{(user?.stakeAmount || 0).toFixed(6)} BTC</strong>
-            <p>Passive rewards in demo mode.</p>
-          </div>
         </section>
 
         <section className="content-grid">
@@ -566,7 +537,6 @@ export default function FinancePage() {
             <div className="tab-row">
               <button className={`tab-btn ${activeTab === 'deposit' ? 'active' : ''}`} onClick={() => setActiveTab('deposit')}>Deposit</button>
               <button className={`tab-btn ${activeTab === 'withdraw' ? 'active' : ''}`} onClick={() => setActiveTab('withdraw')}>Withdraw</button>
-              <button className={`tab-btn ${activeTab === 'stake' ? 'active' : ''}`} onClick={() => setActiveTab('stake')}>Stake</button>
             </div>
 
             {activeTab === 'deposit' && (
@@ -615,21 +585,6 @@ export default function FinancePage() {
               </div>
             )}
 
-            {activeTab === 'stake' && (
-              <div className="flow-card">
-                <h2>Stake BTC</h2>
-                <p>Move BTC into the staking pool and earn passive rewards.</p>
-                <div className="field">
-                  <label>Stake Amount (BTC)</label>
-                  <input className="amount-input" value={stakeAmount} onChange={(event) => setStakeAmount(event.target.value)} type="number" placeholder="0.050000" />
-                  <div className="amount-note">Available BTC: {(user?.btcBalance || 0).toFixed(6)}</div>
-                </div>
-                <button className="cta" onClick={submitStake}>Start Staking</button>
-                {stakeSubmitted && (
-                  <div className="status-banner">BTC moved to staking successfully.</div>
-                )}
-              </div>
-            )}
           </div>
 
           <aside className="card history-card">
@@ -638,7 +593,7 @@ export default function FinancePage() {
               {userTransactions.map((tx) => (
                 <div key={tx.id} className="tx-item">
                   <div className={`tx-icon ${tx.type}`}>
-                    {tx.type === 'deposit' ? <ArrowDownCircle size={20} /> : tx.type === 'withdraw' ? <ArrowUpCircle size={20} /> : <Lock size={20} />}
+                    {tx.type === 'deposit' ? <ArrowDownCircle size={20} /> : <ArrowUpCircle size={20} />}
                   </div>
                   <div className="tx-meta">
                     <strong>{tx.type}</strong>

@@ -720,6 +720,14 @@ export default function ProfilePage() {
               </strong>
             </div>
             <div className="account-chip">
+              <span>Invite Code</span>
+              <strong>{user?.inviteCode || 'Available after verification'}</strong>
+            </div>
+            <div className="account-chip">
+              <span>Free AI Days</span>
+              <strong>{user?.freeAiDays || 0}</strong>
+            </div>
+            <div className="account-chip">
               <span>Account ID</span>
               <strong>{user?.id || 'Not assigned'}</strong>
             </div>

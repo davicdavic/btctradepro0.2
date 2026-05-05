@@ -7,6 +7,7 @@ export default function LoginPage() {
   const { login, register } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,7 +15,7 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSignUp) {
-      register(username, email, password);
+      register(username, email, password, inviteCode);
       return;
     }
     login(username, password);
@@ -147,16 +148,28 @@ export default function LoginPage() {
               </div>
 
               {isSignUp && (
-                <div>
-                  <label className="block text-sm font-medium text-btc-text-secondary mb-2">Email (Optional)</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 bg-btc-dark border border-btc-border rounded-lg text-white placeholder-btc-text-secondary/50 focus:border-btc-gold focus:ring-1 focus:ring-btc-gold/50 transition-all"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-btc-text-secondary mb-2">Email (Optional)</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full px-4 py-3 bg-btc-dark border border-btc-border rounded-lg text-white placeholder-btc-text-secondary/50 focus:border-btc-gold focus:ring-1 focus:ring-btc-gold/50 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-btc-text-secondary mb-2">Invite Code (Optional)</label>
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="Enter verified trader code"
+                      className="w-full px-4 py-3 bg-btc-dark border border-btc-border rounded-lg text-white placeholder-btc-text-secondary/50 focus:border-btc-gold focus:ring-1 focus:ring-btc-gold/50 transition-all uppercase"
+                    />
+                  </div>
+                </>
               )}
 
               <div>
