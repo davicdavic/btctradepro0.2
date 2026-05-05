@@ -661,6 +661,10 @@ export default function TradePage() {
           overflow: hidden;
           min-height: 680px;
         }
+        .chart-card.ai-mode {
+          overflow: visible;
+          min-height: auto;
+        }
         .chart-top {
           position: sticky;
           top: 0;
@@ -717,6 +721,34 @@ export default function TradePage() {
           align-items: center;
           gap: 8px;
           flex-wrap: nowrap;
+        }
+        .market-balance-box {
+          margin-top: 4px;
+          width: 100%;
+          max-width: 320px;
+          padding: 14px 16px;
+          border-radius: 18px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        .market-balance-label {
+          color: #8fa2ba;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 8px;
+        }
+        .market-balance-value {
+          color: #eef3fb;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 24px;
+          font-weight: 800;
+        }
+        .market-balance-sub {
+          margin-top: 6px;
+          color: #7f90a7;
+          font-size: 12px;
         }
         .pair-price {
           font-family: 'JetBrains Mono', monospace;
@@ -1275,8 +1307,9 @@ export default function TradePage() {
         .ai-terminal-shell {
           display: grid;
           gap: 18px;
-          padding: 18px 22px 22px;
-          min-height: 520px;
+          padding: 24px 22px 26px;
+          min-height: 0;
+          align-content: start;
         }
         .ai-terminal-topbar {
           display: flex;
@@ -1299,7 +1332,7 @@ export default function TradePage() {
         }
         .ai-terminal-screen {
           flex: 1;
-          min-height: 420px;
+          min-height: 360px;
           border-radius: 24px;
           border: 1px solid rgba(54, 255, 133, 0.18);
           background:
@@ -1309,6 +1342,7 @@ export default function TradePage() {
           padding: 22px;
           overflow: hidden;
           position: relative;
+          animation: terminalPulse 3.2s ease-in-out infinite;
         }
         .ai-terminal-screen::after {
           content: '';
@@ -1324,6 +1358,18 @@ export default function TradePage() {
           pointer-events: none;
           opacity: 0.18;
         }
+        .ai-terminal-screen::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: -25%;
+          height: 35%;
+          background: linear-gradient(180deg, rgba(125,255,173,0), rgba(125,255,173,0.12), rgba(125,255,173,0));
+          animation: scanSweep 5.4s linear infinite;
+          pointer-events: none;
+          opacity: 0.85;
+        }
         .ai-terminal-line {
           position: relative;
           z-index: 1;
@@ -1334,6 +1380,28 @@ export default function TradePage() {
           letter-spacing: 0.02em;
           text-shadow: 0 0 8px rgba(80, 255, 146, 0.22);
           word-break: break-word;
+          animation: terminalFlicker 2.8s steps(2) infinite;
+        }
+        .ai-terminal-line:nth-child(2n) {
+          animation-duration: 3.6s;
+        }
+        .ai-terminal-line:nth-child(3n) {
+          animation-duration: 2.2s;
+        }
+        @keyframes scanSweep {
+          0% { transform: translateY(-120%); }
+          100% { transform: translateY(420%); }
+        }
+        @keyframes terminalFlicker {
+          0%, 100% { opacity: 0.95; transform: translateX(0); }
+          20% { opacity: 0.82; transform: translateX(0.3px); }
+          40% { opacity: 1; transform: translateX(-0.4px); }
+          60% { opacity: 0.88; transform: translateX(0.2px); }
+          80% { opacity: 0.98; transform: translateX(-0.2px); }
+        }
+        @keyframes terminalPulse {
+          0%, 100% { box-shadow: inset 0 0 0 1px rgba(41, 91, 55, 0.18), 0 0 0 rgba(0,0,0,0); }
+          50% { box-shadow: inset 0 0 0 1px rgba(41, 91, 55, 0.18), 0 0 24px rgba(125,255,173,0.08); }
         }
         .ai-modal {
           width: min(100%, 980px);
@@ -1546,6 +1614,14 @@ export default function TradePage() {
             gap: 4px;
             flex-wrap: nowrap;
           }
+          .market-balance-box {
+            max-width: 100%;
+            padding: 16px;
+            border-radius: 20px;
+          }
+          .market-balance-value {
+            font-size: 26px;
+          }
           .pair-icon {
             width: 32px;
             height: 32px;
@@ -1635,7 +1711,7 @@ export default function TradePage() {
           }
           .ai-terminal-shell {
             padding: 14px 16px 18px;
-            min-height: 440px;
+            min-height: 0;
           }
           .ai-panel-topbar,
           .ai-terminal-topbar {
@@ -1675,7 +1751,7 @@ export default function TradePage() {
         }
       `}</style>
 
-      <section className="trade-card chart-card">
+      <section className={`trade-card chart-card ${tradeMode === 'ai' ? 'ai-mode' : ''}`}>
         <div className="chart-top">
           <div className="pair-block">
             <div className="pair-icon">₿</div>
@@ -1691,6 +1767,15 @@ export default function TradePage() {
               <div className={`pair-change ${btcChange24h >= 0 ? 'up' : 'down'}`}>
                 {btcChange24h >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
                 {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
+              </div>
+            </div>
+            <div className="market-balance-box">
+              <div className="market-balance-label">{tradeMode === 'ai' ? 'Available after AI lock' : 'Available balance'}</div>
+              <div className="market-balance-value">${formatNumber(availableUsdBalance)}</div>
+              <div className="market-balance-sub">
+                {tradeMode === 'ai'
+                  ? `Locked by AI: $${formatNumber(lockedAiAmount)}`
+                  : 'Ready for manual trading'}
               </div>
             </div>
           </div>
@@ -1801,14 +1886,6 @@ export default function TradePage() {
 
       <aside className="trade-card trade-panel">
         <div className="panel-title">Trade ticket</div>
-
-        <div className="ticket-topbar">
-          <div className="ticket-topbar-copy">
-            <strong>Margin Level</strong>
-            <span>{tradeMode === 'ai' ? 'Available after AI lock' : 'Available balance'}</span>
-          </div>
-          <div className="ticket-topbar-value">{formatNumber(availableUsdBalance)}</div>
-        </div>
 
         <div className="ticket-pill-row">
           <button className={`ticket-pill ${tradeMode === 'normal' ? 'emphasis' : ''}`} onClick={() => setTradeMode('normal')}>
