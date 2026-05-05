@@ -38,12 +38,13 @@ export const AI_PLAN_DURATIONS: Array<{
   key: AiPlanDurationKey;
   label: string;
   months: number;
+  days: number;
   discountPct: number;
 }> = [
-  { key: '1m', label: '1 Month', months: 1, discountPct: 0 },
-  { key: '3m', label: '3 Months', months: 3, discountPct: 1 },
-  { key: '6m', label: '6 Months', months: 6, discountPct: 3 },
-  { key: '1y', label: '1 Year', months: 12, discountPct: 5 },
+  { key: '1m', label: '1 Month', months: 1, days: 30, discountPct: 0 },
+  { key: '3m', label: '3 Months', months: 3, days: 90, discountPct: 1 },
+  { key: '6m', label: '6 Months', months: 6, days: 180, discountPct: 3 },
+  { key: '1y', label: '1 Year', months: 12, days: 365, discountPct: 5 },
 ];
 
 export function getAiPlanConfig(tier: AiPlanTier) {
@@ -60,9 +61,9 @@ export function calculateAiPlanTotal(monthlyPrice: number, termMonths: number, d
   return Number((baseTotal - discountValue).toFixed(2));
 }
 
-function addMonths(baseDate: Date, months: number) {
+function addDays(baseDate: Date, days: number) {
   const next = new Date(baseDate);
-  next.setMonth(next.getMonth() + months);
+  next.setDate(next.getDate() + days);
   return next;
 }
 
@@ -76,10 +77,26 @@ export function isAiSubscriptionActive(subscription?: AiTradingSubscription) {
   return new Date(subscription.subscriptionEndsAt).getTime() > Date.now();
 }
 
+export function getAiDailyLimitSeconds(subscription?: AiTradingSubscription) {
+  return (subscription?.tradeWindowHours || 0) * 60 * 60;
+}
+
+export function getAiDailyUsedSeconds(subscription?: AiTradingSubscription, now = Date.now()) {
+  if (!subscription) return 0;
+  if (!subscription.dailyUsageDate || subscription.dailyUsageDate !== toAiSessionDateKey(now)) {
+    return 0;
+  }
+  return subscription.dailyUsedSeconds || 0;
+}
+
+export function getAiRemainingSecondsForToday(subscription?: AiTradingSubscription, now = Date.now()) {
+  if (!subscription) return 0;
+  return Math.max(0, getAiDailyLimitSeconds(subscription) - getAiDailyUsedSeconds(subscription, now));
+}
+
 export function canStartAiSession(subscription?: AiTradingSubscription) {
   if (!subscription || !isAiSubscriptionActive(subscription) || subscription.active) return false;
-  if (!subscription.lastSessionStartedAt) return true;
-  return toAiSessionDateKey(subscription.lastSessionStartedAt) !== toAiSessionDateKey(Date.now());
+  return getAiRemainingSecondsForToday(subscription) > 0;
 }
 
 export function buildAiSubscription(
@@ -94,7 +111,7 @@ export function buildAiSubscription(
   const expiresAt = new Date(Date.now() + config.tradeWindowHours * 60 * 60 * 1000).toISOString();
   const subscriptionEndsAt = options?.subscriptionHoursOverride
     ? new Date(Date.now() + options.subscriptionHoursOverride * 60 * 60 * 1000).toISOString()
-    : addMonths(new Date(), duration.months).toISOString();
+    : addDays(new Date(), duration.days).toISOString();
   const totalPrice = options?.priceOverride ?? calculateAiPlanTotal(config.price, duration.months, duration.discountPct);
 
   return {
@@ -113,6 +130,8 @@ export function buildAiSubscription(
     expiresAt,
     lastSessionStartedAt: purchasedAt,
     lastAccruedAt: purchasedAt,
+    dailyUsageDate: toAiSessionDateKey(purchasedAt),
+    dailyUsedSeconds: 0,
     lockedAmount: autoAmount,
     currentProfit: 0,
     totalTrades: 0,

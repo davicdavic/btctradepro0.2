@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ActiveTrade, AiPlanDurationKey, KycRequest, TradeResolution, User, Transaction, Trade, WalletRequest } from './types';
 import { DEFAULT_BTC_AVATAR, DEPOSIT_WALLET, mockUser } from './utils/mockData';
-import { getAiPlanConfig, getAiProfitPerSecond } from './utils/aiTrading';
+import { getAiDailyLimitSeconds, getAiPlanConfig, getAiProfitPerSecond, toAiSessionDateKey } from './utils/aiTrading';
 import { createFallbackSnapshot, fetchBtcSnapshot, subscribeBtcTicker } from './utils/marketApi';
 import { calculatePnL } from './utils/tradeEngine';
 
@@ -169,6 +169,8 @@ function normalizeAiTrading(input: User['aiTrading']): User['aiTrading'] {
     lastSessionStartedAt: input.lastSessionStartedAt ? asString(input.lastSessionStartedAt) : undefined,
     lastAccruedAt: input.lastAccruedAt ? asString(input.lastAccruedAt) : undefined,
     lastTradeAt: input.lastTradeAt ? asString(input.lastTradeAt) : undefined,
+    dailyUsageDate: input.dailyUsageDate ? asString(input.dailyUsageDate) : undefined,
+    dailyUsedSeconds: asNumber(input.dailyUsedSeconds),
     lockedAmount: asNumber(input.lockedAmount, asNumber(input.autoAmount)),
     currentProfit: asNumber(input.currentProfit),
     totalTrades: asNumber(input.totalTrades),
@@ -977,13 +979,20 @@ function App() {
       const lastAccruedTime = subscription.lastAccruedAt ? new Date(subscription.lastAccruedAt).getTime() : now;
       const elapsedSeconds = Math.max(1, Math.floor((now - lastAccruedTime) / 1000));
       const profitPerSecond = getAiProfitPerSecond(subscription.autoAmount);
-      const increment = profitPerSecond * elapsedSeconds;
-      const sessionFinished = Number.isFinite(endTime) && now >= endTime;
+      const todayKey = toAiSessionDateKey(now);
+      const currentUsedSeconds = subscription.dailyUsageDate === todayKey ? subscription.dailyUsedSeconds || 0 : 0;
+      const remainingToday = Math.max(0, getAiDailyLimitSeconds(subscription) - currentUsedSeconds);
+      const appliedSeconds = Math.max(0, Math.min(elapsedSeconds, remainingToday));
+      const increment = profitPerSecond * appliedSeconds;
+      const sessionFinished = Number.isFinite(endTime) && now >= endTime || remainingToday <= elapsedSeconds;
       const finalAccruedAt = new Date(now).toISOString();
 
       replaceUser(currentUser.email, (entry) => {
         if (!entry.aiTrading?.active) return entry;
         const currentAi = entry.aiTrading;
+        const entryTodayKey = toAiSessionDateKey(now);
+        const entryUsedSeconds = currentAi.dailyUsageDate === entryTodayKey ? currentAi.dailyUsedSeconds || 0 : 0;
+        const nextUsedSeconds = Math.min(getAiDailyLimitSeconds(currentAi), entryUsedSeconds + appliedSeconds);
 
         const nextProfit = currentAi.currentProfit + increment;
         const nextActive = sessionFinished ? false : currentAi.active;
@@ -994,6 +1003,8 @@ function App() {
             ...currentAi,
             currentProfit: nextProfit,
             lastAccruedAt: finalAccruedAt,
+            dailyUsageDate: entryTodayKey,
+            dailyUsedSeconds: nextUsedSeconds,
             active: nextActive,
           },
         };

@@ -456,6 +456,8 @@ export default function Header({ btcPrice, btcChange24h }: HeaderProps) {
           }
           .market-tape {
             border-radius: 12px;
+            width: 100%;
+            flex: none;
           }
           .market-tape-segment {
             gap: 10px;
@@ -588,7 +590,7 @@ export default function Header({ btcPrice, btcChange24h }: HeaderProps) {
             </div>
             <div className="ticker-cash-card">
               <div className="ticker-cash-copy">
-                <div className="summary-label">Cash Balance</div>
+                <div className="summary-label">Balance</div>
                 <div className="summary-value">
                   ${(user?.usdBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>

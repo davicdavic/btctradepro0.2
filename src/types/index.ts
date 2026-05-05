@@ -18,6 +18,8 @@ export interface AiTradingSubscription {
   lastSessionStartedAt?: string;
   lastAccruedAt?: string;
   lastTradeAt?: string;
+  dailyUsageDate?: string;
+  dailyUsedSeconds: number;
   lockedAmount: number;
   currentProfit: number;
   totalTrades: number;
