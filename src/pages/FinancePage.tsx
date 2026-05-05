@@ -127,7 +127,7 @@ export default function FinancePage() {
     <>
       {/* Deposit Modal */}
       {showDepositModal && pendingDeposit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6">
+        <div className="fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto bg-[#05070c]/95 p-0 backdrop-blur-md sm:items-center sm:bg-black/70 sm:p-6">
           <div className="deposit-modal">
             <style>{`
               .deposit-modal {
@@ -311,17 +311,21 @@ export default function FinancePage() {
               @media (max-width: 640px) {
                 .deposit-modal {
                   width: 100%;
-                  border-radius: 22px;
-                  max-height: calc(100vh - 14px);
+                  min-height: 100vh;
+                  max-height: none;
+                  border-radius: 0;
+                  border-left: none;
+                  border-right: none;
+                  border-top: none;
                 }
                 .dm-head h2 {
                   font-size: 20px;
                 }
                 .dm-head {
-                  padding: 18px 18px 0;
+                  padding: max(18px, env(safe-area-inset-top)) 18px 0;
                 }
                 .dm-receipt {
-                  padding: 0 18px 18px;
+                  padding: 0 18px calc(18px + env(safe-area-inset-bottom));
                 }
                 .dm-btc-val {
                   font-size: 26px;
@@ -340,6 +344,7 @@ export default function FinancePage() {
                 }
                 .dm-actions {
                   grid-template-columns: 1fr;
+                  padding-bottom: max(4px, env(safe-area-inset-bottom));
                 }
                 .dm-row {
                   align-items: flex-start;

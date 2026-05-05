@@ -27,8 +27,7 @@ export function calculatePnL({
 }) {
   const rawMove = (exitPrice - entryPrice) / entryPrice;
   const directionalMove = tradeDirection === 'up' ? rawMove : -rawMove;
-  // Timed trades settle as a fixed leveraged payout when the direction is correct.
-  const pnl = directionalMove > 0 ? amount * leverageValue : -amount;
+  const pnl = amount * directionalMove * leverageValue;
 
   return {
     pnl: Math.max(-amount, pnl),

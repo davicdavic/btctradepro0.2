@@ -61,6 +61,8 @@ function formatAiTimeRemaining(expiresAt?: string) {
   return `${hours}h left`;
 }
 
+const PREVIEW_MOVE_PCT = 0.3;
+
 export default function TradePage() {
   const { user, updateUser } = useAuth();
   const { btcPrice, btcChange24h, btcHigh24h, btcLow24h, trades, activeTrade, lastTradeResult, startTrade, clearTradeResult, addTrade } = useApp();
@@ -87,8 +89,8 @@ export default function TradePage() {
   const latestCandle = candles[candles.length - 1]?.candle;
   const latestPrice = latestCandle?.close ?? btcPrice;
   const currentVolume = candles[candles.length - 1]?.volume.value ?? 0;
-  const potentialWin = direction ? parseFloat(amount || '0') * leverage : 0;
-  const potentialLoss = parseFloat(amount || '0');
+  const potentialWin = direction ? parseFloat(amount || '0') * (PREVIEW_MOVE_PCT / 100) * leverage : 0;
+  const potentialLoss = parseFloat(amount || '0') * (PREVIEW_MOVE_PCT / 100) * leverage;
   const selectedTimeframe = TIMEFRAMES.find((item) => item.value === timeframe) ?? TIMEFRAMES[0];
   const activeTimeframeMeta = TIMEFRAMES.find((item) => item.value === activeTrade?.timeframeValue) ?? selectedTimeframe;
   const isTrading = Boolean(activeTrade && user && activeTrade.userEmail === user.email);
@@ -565,7 +567,7 @@ export default function TradePage() {
   return (
     <>
       {showAiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#04070d]/80 p-4 backdrop-blur-md">
+        <div className="fixed inset-0 z-[240] flex items-start justify-center overflow-y-auto bg-[#04070d]/80 p-3 pt-6 backdrop-blur-md sm:items-center sm:p-4">
           <div className="ai-modal">
             <div className="ai-modal-head">
               <div>
@@ -590,7 +592,7 @@ export default function TradePage() {
                     <span>${formatNumber(plan.price)}/month</span>
                   </div>
                   <div className="ai-plan-meta">{plan.tradeWindowHours} hour trading window</div>
-                  <div className="ai-plan-meta">{plan.leverage}x AI payout engine</div>
+                  <div className="ai-plan-meta">{plan.leverage}x AI session profile</div>
                   <p>{plan.description}</p>
                 </button>
               ))}
@@ -1152,6 +1154,25 @@ export default function TradePage() {
             radial-gradient(circle at top right, rgba(52, 120, 246, 0.18), transparent 40%),
             linear-gradient(180deg, rgba(12, 18, 30, 0.96), rgba(10, 14, 24, 0.94));
         }
+        .ai-panel-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+          flex-wrap: wrap;
+        }
+        .ai-back-btn {
+          min-height: 40px;
+          padding: 0 14px;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 14px;
+          background: rgba(255,255,255,0.05);
+          color: #dce7f7;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+        }
         .ai-status-head {
           display: flex;
           align-items: flex-start;
@@ -1247,6 +1268,13 @@ export default function TradePage() {
           gap: 18px;
           padding: 18px 22px 22px;
           min-height: 520px;
+        }
+        .ai-terminal-topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
         }
         .ai-terminal-head strong {
           display: block;
@@ -1595,6 +1623,13 @@ export default function TradePage() {
             padding: 14px 16px 18px;
             min-height: 440px;
           }
+          .ai-panel-topbar,
+          .ai-terminal-topbar {
+            align-items: stretch;
+          }
+          .ai-back-btn {
+            width: 100%;
+          }
           .ai-terminal-screen {
             min-height: 340px;
             padding: 16px;
@@ -1728,9 +1763,14 @@ export default function TradePage() {
           </>
         ) : (
           <div className="ai-terminal-shell">
-            <div className="ai-terminal-head">
-              <strong>AI Trade View</strong>
-              <span>Green terminal stream for live AI session status</span>
+            <div className="ai-terminal-topbar">
+              <button className="ai-back-btn" onClick={() => setTradeMode('normal')}>
+                Back To Normal Trade
+              </button>
+              <div className="ai-terminal-head">
+                <strong>AI Trade View</strong>
+                <span>Green terminal stream for live AI session status</span>
+              </div>
             </div>
             <div className="ai-terminal-screen">
               {aiTerminalLines.map((line) => (
@@ -1843,11 +1883,11 @@ export default function TradePage() {
                   <strong>${latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
                 <div className="info-row">
-                  <span>Potential profit</span>
+                  <span>{PREVIEW_MOVE_PCT}% move profit</span>
                   <strong style={{ color: '#0ecb81' }}>${formatNumber(potentialWin)}</strong>
                 </div>
                 <div className="info-row">
-                  <span>Max loss</span>
+                  <span>{PREVIEW_MOVE_PCT}% move loss</span>
                   <strong style={{ color: '#f6465d' }}>${formatNumber(potentialLoss || 0)}</strong>
                 </div>
                 <div className="info-row">
@@ -1867,6 +1907,11 @@ export default function TradePage() {
           </>
         ) : (
           <div className="ai-status-card">
+            <div className="ai-panel-topbar">
+              <button className="ai-back-btn" onClick={() => setTradeMode('normal')}>
+                Back To Normal Trade
+              </button>
+            </div>
             <div className="ai-status-head">
               <div>
                 <strong>{aiSubscription?.active ? `${aiSubscription.displayName} AI is active` : 'Upgrade to AI Trade'}</strong>
