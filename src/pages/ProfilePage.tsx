@@ -743,7 +743,7 @@ export default function ProfilePage() {
               className="edit-btn save"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              Manage AI Plan
+              View AI Plan
             </Link>
           </div>
           <div className="form-grid">

@@ -2212,9 +2212,6 @@ export default function TradePage() {
             </div>
 
             <div className="ai-mode-actions">
-              <button className="ai-open-btn" onClick={() => setShowAiModal(true)}>
-                {hasPaidAiPlan ? 'View AI Plans' : 'Open AI Trading'}
-              </button>
               {hasPaidAiPlan && !aiSubscription?.active && (
                 <button className="ai-open-btn secondary" onClick={handleStartNextAiSession}>
                   Start Today AI Session
