@@ -722,34 +722,6 @@ export default function TradePage() {
           gap: 8px;
           flex-wrap: nowrap;
         }
-        .market-balance-box {
-          margin-top: 4px;
-          width: 100%;
-          max-width: 320px;
-          padding: 14px 16px;
-          border-radius: 18px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
-          border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-        }
-        .market-balance-label {
-          color: #8fa2ba;
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          margin-bottom: 8px;
-        }
-        .market-balance-value {
-          color: #eef3fb;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 24px;
-          font-weight: 800;
-        }
-        .market-balance-sub {
-          margin-top: 6px;
-          color: #7f90a7;
-          font-size: 12px;
-        }
         .pair-price {
           font-family: 'JetBrains Mono', monospace;
           font-size: clamp(18px, 2.2vw, 26px);
@@ -1614,14 +1586,6 @@ export default function TradePage() {
             gap: 4px;
             flex-wrap: nowrap;
           }
-          .market-balance-box {
-            max-width: 100%;
-            padding: 16px;
-            border-radius: 20px;
-          }
-          .market-balance-value {
-            font-size: 26px;
-          }
           .pair-icon {
             width: 32px;
             height: 32px;
@@ -1767,15 +1731,6 @@ export default function TradePage() {
               <div className={`pair-change ${btcChange24h >= 0 ? 'up' : 'down'}`}>
                 {btcChange24h >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
                 {btcChange24h >= 0 ? '+' : ''}{btcChange24h.toFixed(2)}%
-              </div>
-            </div>
-            <div className="market-balance-box">
-              <div className="market-balance-label">{tradeMode === 'ai' ? 'Available after AI lock' : 'Available balance'}</div>
-              <div className="market-balance-value">${formatNumber(availableUsdBalance)}</div>
-              <div className="market-balance-sub">
-                {tradeMode === 'ai'
-                  ? `Locked by AI: $${formatNumber(lockedAiAmount)}`
-                  : 'Ready for manual trading'}
               </div>
             </div>
           </div>
