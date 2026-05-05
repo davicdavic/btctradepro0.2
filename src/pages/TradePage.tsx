@@ -217,6 +217,10 @@ export default function TradePage() {
   useEffect(() => {
     if (searchParams.get('mode') !== 'ai') return;
     setTradeMode('ai');
+    if (searchParams.get('buy') === '1') {
+      setShowAiModal(true);
+      return;
+    }
     if (!hasPaidAiPlan && !aiSubscription?.active && !(user?.freeAiDays || 0)) {
       setShowAiModal(true);
     }

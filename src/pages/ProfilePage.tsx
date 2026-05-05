@@ -739,7 +739,7 @@ export default function ProfilePage() {
           </div>
           <div style={{ marginTop: '18px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             <Link
-              to="/trade?mode=ai"
+              to="/trade?mode=ai&buy=1"
               className="edit-btn save"
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
