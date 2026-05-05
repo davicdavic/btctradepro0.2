@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Award, Camera, Check, FileText, Shield, User } from 'lucide-react';
 import { useAuth } from '../App';
 
@@ -43,6 +43,7 @@ function verificationStatusLabel(status: 'unverified' | 'pending' | 'approved' |
 
 export default function ProfilePage() {
   const { user, updateUser, submitKycRequest } = useAuth();
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const hasVerifiedProfile = user?.verificationStatus === 'approved';
   const memberSince = user?.joinedDate ? new Date(user.joinedDate).toLocaleDateString() : 'Not available';
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'verification'>('profile');
@@ -238,37 +239,31 @@ export default function ProfilePage() {
           min-width: 280px;
         }
         .desk-strip {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 14px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 14px 22px;
+          padding: 0 8px;
+          align-items: center;
         }
-        .desk-card {
-          padding: 18px;
-          border-radius: 22px;
-          background:
-            linear-gradient(180deg, rgba(18, 23, 34, 0.94), rgba(13, 17, 26, 0.92));
-          border: 1px solid rgba(255,255,255,.06);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+        .desk-item {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          color: #dbe4f1;
+          min-width: 0;
         }
-        .desk-card span {
-          display: block;
+        .desk-item span {
           color: #8fa2ba;
           font-size: 11px;
           text-transform: uppercase;
           letter-spacing: .08em;
-          margin-bottom: 8px;
+          white-space: nowrap;
         }
-        .desk-card strong {
-          display: block;
-          font-size: 20px;
-          font-weight: 800;
-          line-height: 1.4;
-        }
-        .desk-card small {
-          display: block;
-          margin-top: 8px;
-          color: #7f90a7;
+        .desk-item strong {
+          font-size: 14px;
+          font-weight: 700;
           line-height: 1.5;
+          white-space: nowrap;
         }
         .hero-stat {
           padding: 14px 16px;
@@ -297,6 +292,10 @@ export default function ProfilePage() {
           position: relative;
           flex-shrink: 0;
           background: linear-gradient(135deg, #f7931a, #ffb347);
+        }
+        .avatar-wrap.editable {
+          cursor: pointer;
+          box-shadow: 0 0 0 3px rgba(52,120,246,.16);
         }
         .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-fallback {
@@ -354,6 +353,17 @@ export default function ProfilePage() {
           border-radius: 22px;
           background: rgba(255,255,255,.03);
           border: 1px solid rgba(255,255,255,.07);
+        }
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
         }
         .avatar-section-head {
           display: flex;
@@ -584,8 +594,15 @@ export default function ProfilePage() {
             min-width: 0;
             grid-template-columns: 1fr 1fr;
           }
-          .desk-strip,
           .form-grid { grid-template-columns: 1fr; }
+          .desk-strip {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+          .desk-item {
+            flex-wrap: wrap;
+          }
           .account-grid { grid-template-columns: 1fr; }
           .certificate-sheet { padding: 20px; }
           .certificate-brand { align-items: flex-start; }
@@ -594,10 +611,25 @@ export default function ProfilePage() {
 
       <section className="card hero">
         <div className="hero-main">
-          <div className="avatar-wrap">
+          <button
+            type="button"
+            className={`avatar-wrap ${editMode ? 'editable' : ''}`}
+            onClick={() => {
+              if (editMode) {
+                avatarInputRef.current?.click();
+              }
+            }}
+          >
             {formData.avatar ? <img src={formData.avatar} alt={displayName} /> : <div className="avatar-fallback">{avatarInitial}</div>}
             <div className="avatar-edit"><Camera size={16} /></div>
-          </div>
+          </button>
+          <input
+            ref={avatarInputRef}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+          />
           <div>
             <h1>{displayName}</h1>
             <p>{displayEmail}</p>
@@ -636,25 +668,21 @@ export default function ProfilePage() {
       </section>
 
       <section className="desk-strip">
-        <div className="desk-card">
+        <div className="desk-item">
           <span>Account Tier</span>
           <strong>{accountTier}</strong>
-          <small>Your profile status updates here after admin review.</small>
         </div>
-        <div className="desk-card">
+        <div className="desk-item">
           <span>Member Since</span>
           <strong>{memberSince}</strong>
-          <small>Account creation date for this trading profile.</small>
         </div>
-        <div className="desk-card">
+        <div className="desk-item">
           <span>Timezone</span>
           <strong>{formData.timezone || 'UTC'}</strong>
-          <small>Your dashboard and profile follow this account region.</small>
         </div>
-        <div className="desk-card">
-          <span>Security State</span>
+        <div className="desk-item">
+          <span>Security</span>
           <strong>{user?.password ? 'Password Active' : 'Password Not Set'}</strong>
-          <small>Use the security tab to refresh your sign-in credentials.</small>
         </div>
       </section>
 
@@ -705,32 +733,6 @@ export default function ProfilePage() {
             {hasVerifiedProfile && <div className="field"><label>Post Code</label><input value={formData.postCode} disabled={!editMode} onChange={(event) => setFormData({ ...formData, postCode: event.target.value })} /></div>}
             <div className="field"><label>Timezone</label><input value={formData.timezone} disabled={!editMode} onChange={(event) => setFormData({ ...formData, timezone: event.target.value })} /></div>
             {hasVerifiedProfile && <div className="field"><label>Job</label><input value={user?.job || ''} disabled /></div>}
-            <div className="avatar-section">
-              <div className="avatar-section-head">
-                <div className="avatar-section-copy">
-                  <strong>Profile Photo</strong>
-                  <span>Upload your own photo from your phone or computer.</span>
-                </div>
-              </div>
-              <div className="avatar-preview-row">
-                <div className="avatar-preview-chip">
-                  {formData.avatar ? <img src={formData.avatar} alt={displayName} /> : <div className="avatar-fallback">{avatarInitial}</div>}
-                </div>
-                <div className="avatar-preview-copy">
-                  <strong>{displayName || 'Trader Profile'}</strong>
-                  <span>{editMode ? 'Choose an image file, then save your profile changes.' : 'Your current public trading profile image.'}</span>
-                </div>
-              </div>
-              <div className="avatar-help">Your profile photo is stored in this demo account after you save the profile.</div>
-              <div className="avatar-actions">
-                <label className="upload-btn">
-                  <Camera size={16} />
-                  Choose Photo
-                  <input className="sr-only" type="file" accept="image/*" disabled={!editMode} onChange={handleAvatarUpload} />
-                </label>
-                <span className="upload-note">JPG, PNG, or WEBP from mobile or desktop</span>
-              </div>
-            </div>
           </div>
         </section>
       )}

@@ -455,7 +455,7 @@ export default function FinancePage() {
             letter-spacing: -0.03em; margin-bottom: 8px;
           }
           .page-head p { color: #90a0b6; }
-          .balance-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); }
+          .balance-grid { display: grid; gap: 18px; grid-template-columns: repeat(2, 1fr); }
           .balance-card { padding: 22px; }
           .balance-icon {
             width: 48px; height: 48px; border-radius: 16px;
@@ -552,12 +552,6 @@ export default function FinancePage() {
             <h3>USD Balance</h3>
             <strong>${formatNumber(user?.usdBalance || 0)}</strong>
             <p>Available for trading and withdrawals.</p>
-          </div>
-          <div className="card balance-card">
-            <div className="balance-icon"><Bitcoin size={24} /></div>
-            <h3>BTC Holdings</h3>
-            <strong>{(user?.btcBalance || 0).toFixed(6)} BTC</strong>
-            <p>Live value: ${((user?.btcBalance || 0) * btcPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
           </div>
           <div className="card balance-card">
             <div className="balance-icon"><Lock size={24} /></div>

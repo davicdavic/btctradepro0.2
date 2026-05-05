@@ -1015,7 +1015,6 @@ function App() {
       if (target.type === 'deposit') {
         return {
           ...entry,
-          btcBalance: entry.btcBalance + (target.btcAmount || 0),
           usdBalance: entry.usdBalance + target.amount,
         };
       }

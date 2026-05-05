@@ -15,7 +15,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
   const [showNotifications, setShowNotifications] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationMenuRef = useRef<HTMLDivElement | null>(null);
-  const btcValueUsd = (user?.btcBalance || 0) * btcPrice;
 
   const notifications = [
     { id: 1, title: 'Deposit Confirmed', message: 'Your BTC deposit of 0.025 BTC has been confirmed', time: '2 min ago', unread: true },
@@ -616,11 +615,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
                 ${(user?.usdBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <div className="balance-divider" />
-            <div>
-              <span className="balance-label">BTC</span>
-              <span className="balance-value btc">{(user?.btcBalance || 0).toFixed(6)}</span>
-            </div>
           </div>
 
           <div className="user-menu" ref={notificationMenuRef}>
@@ -692,16 +686,6 @@ export default function Header({ btcPrice, btcChange24h, marketStatus }: HeaderP
       </div>
 
       <div className="header-summary">
-        <div className="summary-card">
-          <div>
-            <div className="summary-label">Portfolio BTC</div>
-            <div className="summary-value">{(user?.btcBalance || 0).toFixed(6)} BTC</div>
-          </div>
-          <div className="summary-sub">
-            ${btcValueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        </div>
-
         <div className="summary-card">
           <div>
             <div className="summary-label">Cash Balance</div>

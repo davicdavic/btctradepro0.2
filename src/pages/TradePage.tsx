@@ -567,7 +567,7 @@ export default function TradePage() {
   return (
     <>
       {showAiModal && (
-        <div className="fixed inset-0 z-[240] flex items-start justify-center overflow-y-auto bg-[#04070d]/80 p-3 pt-6 backdrop-blur-md sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto bg-[#05070c] p-0 sm:items-center sm:p-6">
           <div className="ai-modal">
             <div className="ai-modal-head">
               <div>
@@ -577,7 +577,10 @@ export default function TradePage() {
                   The AI trader reads recent BTC price action, opens demo auto-trades on your account, and sends every result into your trade history.
                 </p>
               </div>
-              <button className="ai-close-btn" onClick={() => setShowAiModal(false)}>Close</button>
+              <div className="ai-head-actions">
+                <button className="ai-close-btn" onClick={() => setShowAiModal(false)}>Back</button>
+                <button className="ai-close-btn" onClick={() => setShowAiModal(false)}>Close</button>
+              </div>
             </div>
 
             <div className="ai-plan-grid">
@@ -1258,6 +1261,12 @@ export default function TradePage() {
           background: rgba(255,255,255,0.06);
           color: #d7dfeb;
         }
+        .ai-head-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
         .ai-mode-actions {
           display: grid;
           gap: 10px;
@@ -1328,6 +1337,7 @@ export default function TradePage() {
         }
         .ai-modal {
           width: min(100%, 980px);
+          min-height: min(100vh - 48px, 860px);
           border-radius: 30px;
           border: 1px solid rgba(92, 141, 255, 0.18);
           background:
@@ -1617,6 +1627,10 @@ export default function TradePage() {
             grid-template-columns: repeat(2, 1fr);
           }
           .ai-modal {
+            width: 100%;
+            min-height: 100vh;
+            border-radius: 0;
+            border: none;
             padding: 18px;
           }
           .ai-terminal-shell {
@@ -1635,6 +1649,7 @@ export default function TradePage() {
             padding: 16px;
           }
           .ai-modal-head,
+          .ai-head-actions,
           .ai-summary-bar {
             flex-direction: column;
             align-items: stretch;
@@ -1883,12 +1898,16 @@ export default function TradePage() {
                   <strong>${latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                 </div>
                 <div className="info-row">
-                  <span>{PREVIEW_MOVE_PCT}% move profit</span>
+                  <span>Projected win at {leverage}x</span>
                   <strong style={{ color: '#0ecb81' }}>${formatNumber(potentialWin)}</strong>
                 </div>
                 <div className="info-row">
-                  <span>{PREVIEW_MOVE_PCT}% move loss</span>
+                  <span>Projected loss at {leverage}x</span>
                   <strong style={{ color: '#f6465d' }}>${formatNumber(potentialLoss || 0)}</strong>
+                </div>
+                <div className="info-row">
+                  <span>Leverage rule</span>
+                  <strong>Trade win/loss x{leverage}</strong>
                 </div>
                 <div className="info-row">
                   <span>Trade duration</span>
