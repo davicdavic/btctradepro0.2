@@ -1,4 +1,5 @@
-import { CheckCircle2, Clock3, ShieldCheck, UserRound, Wallet2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, Clock3, RefreshCw, ShieldCheck, UserRound, Wallet2, XCircle } from 'lucide-react';
 import { useApp } from '../App';
 import { formatNumber } from '../utils/mockData';
 
@@ -12,11 +13,30 @@ export default function AdminPage() {
     users,
     walletRequests,
     kycRequests,
+    walletAddress,
+    setWalletAddress,
     approveTransaction,
     rejectTransaction,
     approveVerification,
     rejectVerification,
   } = useApp();
+
+  const [editingWallet, setEditingWallet] = useState(false);
+  const [walletDraft, setWalletDraft] = useState(walletAddress);
+  const [walletSaved, setWalletSaved] = useState(false);
+
+  const handleSaveWallet = () => {
+    if (!walletDraft.trim()) return;
+    setWalletAddress(walletDraft.trim());
+    setEditingWallet(false);
+    setWalletSaved(true);
+    window.setTimeout(() => setWalletSaved(false), 2000);
+  };
+
+  const handleCancelWallet = () => {
+    setWalletDraft(walletAddress);
+    setEditingWallet(false);
+  };
 
   const registeredUsers = users
     .filter((entry) => entry.role !== 'admin')
@@ -308,6 +328,55 @@ export default function AdminPage() {
           color: #8fa2ba;
           background: rgba(255,255,255,0.02);
         }
+        /* Wallet address editor */
+        .wallet-editor-card {
+          padding: 24px;
+        }
+        .wallet-editor-head {
+          display: flex; align-items: center; gap: 12px;
+          margin-bottom: 18px;
+        }
+        .wallet-editor-head h2 {
+          font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+        }
+        .wallet-editor-head p {
+          color: #8fa2ba; font-size: 13px; line-height: 1.6;
+        }
+        .wallet-address-row {
+          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+        .wallet-display {
+          flex: 1; min-width: 0;
+          padding: 12px 16px; border-radius: 14px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.07);
+          color: #eef3fb; font-size: 13px;
+          word-break: break-all; font-family: monospace;
+        }
+        .wallet-input {
+          flex: 1; min-height: 46px; padding: 0 14px; border-radius: 14px;
+          background: rgba(6,10,15,0.4); border: 1px solid rgba(247,147,26,0.3);
+          color: #eef3fb; font-size: 13px; font-family: monospace;
+        }
+        .wallet-input:focus { outline: none; border-color: rgba(247,147,26,0.6); }
+        .wallet-actions { display: flex; gap: 8px; }
+        .wallet-btn {
+          min-height: 42px; padding: 0 14px; border: none; border-radius: 12px;
+          font-weight: 700; font-size: 13px; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px;
+        }
+        .wallet-btn.save { background: rgba(14,203,129,0.16); color: #0ecb81; }
+        .wallet-btn.cancel { background: rgba(246,70,93,0.14); color: #f6465d; }
+        .wallet-btn.edit {
+          background: rgba(247,147,26,0.14); border: 1px solid rgba(247,147,26,0.22);
+          color: #f6b353;
+        }
+        .wallet-saved-badge {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 4px 12px; border-radius: 999px;
+          background: rgba(14,203,129,0.14); color: #0ecb81;
+          font-size: 12px; font-weight: 700;
+        }
         @media (max-width: 1180px) {
           .stats-grid,
           .history-grid,
@@ -376,6 +445,53 @@ export default function AdminPage() {
             <strong>{approvedUsers}</strong>
             <span>Accounts already approved by admin review</span>
           </div>
+        </div>
+      </section>
+
+      {/* Wallet Address Editor */}
+      <section className="admin-card wallet-editor-card">
+        <div className="wallet-editor-head">
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(247,147,26,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f6b353', flexShrink: 0 }}>
+            <Wallet2 size={20} />
+          </div>
+          <div>
+            <h2>Deposit Wallet Address</h2>
+            <p>Configure the BTC wallet address shown to users when they request a deposit. Changing this updates the QR code and address in real time.</p>
+          </div>
+        </div>
+        <div className="wallet-address-row">
+          {editingWallet ? (
+            <>
+              <input
+                className="wallet-input"
+                value={walletDraft}
+                onChange={(e) => setWalletDraft(e.target.value)}
+                placeholder="Enter BTC wallet address"
+              />
+              <div className="wallet-actions">
+                <button className="wallet-btn save" onClick={handleSaveWallet}>
+                  <CheckCircle2 size={15} /> Save
+                </button>
+                <button className="wallet-btn cancel" onClick={handleCancelWallet}>
+                  <XCircle size={15} /> Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="wallet-display">{walletAddress}</div>
+              <div className="wallet-actions">
+                <button className="wallet-btn edit" onClick={() => { setWalletDraft(walletAddress); setEditingWallet(true); }}>
+                  <RefreshCw size={14} /> Edit Address
+                </button>
+              </div>
+            </>
+          )}
+          {walletSaved && (
+            <div className="wallet-saved-badge">
+              <CheckCircle2 size={14} /> Saved
+            </div>
+          )}
         </div>
       </section>
 

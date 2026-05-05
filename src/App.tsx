@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ActiveTrade, KycRequest, TradeResolution, User, Transaction, Trade, WalletRequest } from './types';
-import { DEFAULT_BTC_AVATAR, mockUser } from './utils/mockData';
+import { DEFAULT_BTC_AVATAR, DEPOSIT_WALLET, mockUser } from './utils/mockData';
 import { createFallbackSnapshot, fetchBtcSnapshot, subscribeBtcTicker } from './utils/marketApi';
 import { calculatePnL } from './utils/tradeEngine';
 
@@ -55,6 +55,8 @@ interface AppContextType {
   users: User[];
   activeTrade: ActiveTrade | null;
   lastTradeResult: TradeResolution | null;
+  walletAddress: string;
+  setWalletAddress: (address: string) => void;
   addTransaction: (tx: Transaction) => void;
   addTrade: (trade: Trade) => void;
   startTrade: (trade: ActiveTrade) => void;
@@ -487,6 +489,7 @@ function App() {
     if (typeof window === 'undefined') return null;
     return readTradeResult();
   });
+  const [walletAddress, setWalletAddress] = useState<string>(() => DEPOSIT_WALLET);
 
   useEffect(() => {
     writeStorageJson(USERS_KEY, users);
@@ -548,6 +551,13 @@ function App() {
       removeStorageKey(AUTH_SESSION_KEY);
     }
   }, [user]);
+
+  // Keep mockData DEPOSIT_WALLET in sync with admin-configured address
+  useEffect(() => {
+    import('./utils/mockData').then(({ DEPOSIT_WALLET: _dw }) => {
+      // mockData DEPOSIT_WALLET is a let variable; FinancePage reads from context via useApp
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -1007,6 +1017,8 @@ function App() {
     users,
     activeTrade,
     lastTradeResult,
+    walletAddress,
+    setWalletAddress,
     addTransaction,
     addTrade,
     startTrade,

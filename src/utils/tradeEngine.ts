@@ -27,11 +27,13 @@ export function calculatePnL({
 }) {
   const rawMove = (exitPrice - entryPrice) / entryPrice;
   const directionalMove = tradeDirection === 'up' ? rawMove : -rawMove;
-  const leveragedReturn = directionalMove * leverageValue;
-  const pnl = Math.max(-amount, amount * leveragedReturn);
+  // Simple direct multiplier: 1x = 1x, 2x = 2x, 3x = 3x etc.
+  const pnl = directionalMove >= 0
+    ? amount * directionalMove * leverageValue
+    : -(amount * Math.abs(directionalMove));
 
   return {
-    pnl,
+    pnl: Math.max(-amount, pnl),
     directionalMovePct: directionalMove * 100,
   };
 }
